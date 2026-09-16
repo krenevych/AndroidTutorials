@@ -67,7 +67,7 @@
 <a name="section1"></a>
 ## 1. Підключення та вибір пристрою
 
-Якщо підключено кілька девайсів, команди треба спрямовувати на конкретний пристрій. Замість таблиці ось список селекторів:
+Якщо підключено кілька девайсів, команди треба спрямовувати на конкретний пристрій.
 
 * Показати всі доступні пристрої (та їхні ID), підключені до комп'ютера:
   ```bash
@@ -240,10 +240,34 @@
 Утиліта **`am` (Activity Manager)** є ключовим інструментом для керування життєвим циклом Android-компонентів. Вона взаємодіє безпосередньо з ядром системи, яке контролює поведінку додатків.
 **Основні зони відповідальності:** запуск екранів (Activities) та фонових служб (Services), надсилання широкомовних повідомлень (Broadcasts), передача даних через Intents, симуляція системних подій (наприклад, завантаження пристрою) та примусове завершення процесів додатків.
 
-* `adb shell am start -n com.example.app/.MainActivity` — запустити конкретну Activity.
-* `adb shell am start -S -n com.example.app/.MainActivity` — зупинити процес перед запуском (`-S`).
-* `adb shell am force-stop com.example.app` — повністю вбити процес додатка (краще, ніж просто змахнути з недавніх).
-* `adb shell am broadcast -a android.intent.action.BOOT_COMPLETED` — симулювати перезавантаження пристрою.
+* Запустити конкретну Activity:
+  ```bash
+  adb shell am start -n <пакет>/<повний_шлях_до_класу>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell am start -n com.example.app/.MainActivity
+  ```
+* Зупинити процес перед запуском (`-S`):
+  ```bash
+  adb shell am start -S -n <пакет>/<повний_шлях_до_класу>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell am start -S -n com.example.app/.MainActivity
+  ```
+* Повністю вбити процес додатка (краще, ніж просто змахнути з недавніх):
+  ```bash
+  adb shell am force-stop <назва_пакета>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell am force-stop com.example.app
+  ```
+* Симулювати перезавантаження пристрою:
+  ```bash
+  adb shell am broadcast -a android.intent.action.BOOT_COMPLETED
+  ```
 
 ### Передача параметрів (Extras) при запуску
 ```bash
@@ -258,11 +282,34 @@ adb shell am start -n com.example.app/.DetailsActivity \
 <a name="section4"></a>
 ## 4. Системні логи (`logcat`)
 
-* `adb logcat` — відкрити потік логів.
-* `adb logcat -c` — очистити буфер логів (видалити старі записи).
-* `adb logcat *:E` — показувати **тільки помилки** (Error та Fatal).
-* `adb logcat -s MyTag:D *:S` — показати логи тільки за тегом `MyTag` (рівень Debug і вище).
-* `adb logcat --pid=$(adb shell pidof -s com.example.app) — фільтрувати вивід лише для PID конкретного додатка.`
+* Відкрити потік логів:
+  ```bash
+  adb logcat
+  ```
+* Очистити буфер логів (видалити старі записи):
+  ```bash
+  adb logcat -c
+  ```
+* Показувати **тільки помилки** (Error та Fatal):
+  ```bash
+  adb logcat *:E
+  ```
+* Показати логи тільки за тегом `MyTag` (рівень Debug і вище):
+  ```bash
+  adb logcat -s <Тег>:<Рівень> *:<S>
+  ```
+  _Приклад:_
+  ```bash
+  adb logcat -s MyTag:D *:S
+  ```
+* Фільтрувати вивід лише для PID конкретного додатка:
+  ```bash
+  adb logcat --pid=$(adb shell pidof -s <назва_пакета>)
+  ```
+  _Приклад:_
+  ```bash
+  adb logcat --pid=$(adb shell pidof -s com.example.app)
+  ```
 
 ---
 
@@ -270,23 +317,122 @@ adb shell am start -n com.example.app/.DetailsActivity \
 ## 5. Обмін файлами та файлова система
 
 ### Обмін файлами з комп'ютером
-* `adb push notes.txt /sdcard/notes.txt` — скопіювати файл із комп'ютера на девайс.
-* `adb pull /sdcard/log.txt ./log.txt` — завантажити файл із девайса на робочу станцію.
+
+* Скопіювати файл із комп'ютера на девайс:
+  ```bash
+  adb push <локальний_шлях> <віддалений_шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb push notes.txt /sdcard/notes.txt
+  ```
+* Завантажити файл із девайса на робочу станцію:
+  ```bash
+  adb pull <віддалений_шлях> <локальний_шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb pull /sdcard/log.txt ./log.txt
+  ```
 
 ### Внутрішні команди оболонки
-* `adb shell ls /sdcard/` — переглянути вміст директорії.
-* `adb shell cd /data/data/` — перейти до іншого каталогу.
-* `adb shell pwd` — вивести поточний шлях.
-* `adb shell mkdir /sdcard/myfolder` — створити новий каталог.
-* `adb shell rm /sdcard/old.txt` — видалити файл.
-* `adb shell rm -r /sdcard/photos` — видалити директорію рекурсивно.
-* `adb shell cp /sdcard/a.txt /sdcard/b.txt` — скопіювати файл.
-* `adb shell mv /sdcard/old.txt /sdcard/new.txt` — перемістити або перейменувати файл.
-* `adb shell cat /proc/cpuinfo` — переглянути текстовий вміст файлу.
-* `adb shell "echo Hello > /sdcard/hello.txt"` — записати рядок у файл.
-* `adb shell chmod 777 /sdcard/script.sh` — встановити права доступу.
-* `adb shell chown shell:shell /sdcard/file.txt` — змінити власника файла.
-* `adb shell exit` — завершити сесію оболонки.
+
+* Переглянути вміст директорії:
+  ```bash
+  adb shell ls <шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell ls /sdcard/
+  ```
+* Перейти до іншого каталогу:
+  ```bash
+  adb shell cd <шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell cd /data/data/
+  ```
+* Вивести поточний шлях:
+  ```bash
+  adb shell pwd
+  ```
+* Створити новий каталог:
+  ```bash
+  adb shell mkdir <шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell mkdir /sdcard/myfolder
+  ```
+* Видалити файл:
+  ```bash
+  adb shell rm <шлях_до_файлу>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell rm /sdcard/old.txt
+  ```
+* Видалити директорію рекурсивно:
+  ```bash
+  adb shell rm -r <шлях_до_каталогу>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell rm -r /sdcard/photos
+  ```
+* Скопіювати файл:
+  ```bash
+  adb shell cp <джерело> <призначення>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell cp /sdcard/a.txt /sdcard/b.txt
+  ```
+* Перемістити або перейменувати файл:
+  ```bash
+  adb shell mv <старий_шлях> <новий_шлях>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell mv /sdcard/old.txt /sdcard/new.txt
+  ```
+* Переглянути текстовий вміст файлу:
+  ```bash
+  adb shell cat <шлях_до_файлу>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell cat /proc/cpuinfo
+  ```
+* Записати рядок у файл:
+  ```bash
+  adb shell "echo <текст> > <файл>"
+  ```
+  _Приклад:_
+  ```bash
+  adb shell "echo Hello > /sdcard/hello.txt"
+  ```
+* Встановити права доступу:
+  ```bash
+  adb shell chmod <права> <файл>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell chmod 777 /sdcard/script.sh
+  ```
+* Змінити власника файла:
+  ```bash
+  adb shell chown <власник>:<група> <файл>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell chown shell:shell /sdcard/file.txt
+  ```
+* Завершити сесію оболонки:
+  ```bash
+  adb shell exit
+  ```
 
 ---
 
@@ -294,22 +440,68 @@ adb shell am start -n com.example.app/.DetailsActivity \
 ## 6. Симуляція дій користувача (`input`)
 
 Дуже корисно для тестування без мишки/пальця:
-* `adb shell input tap 500 500` — клік по екрану за координатами (X, Y).
-* `adb shell input text "my_password"` — швидко вставити текст у поле (увага: не підтримує пробіли напряму).
-* `adb shell input keyevent 4` — натиснути апаратну кнопку **"Назад"**.
-* `adb shell input keyevent 3` — натиснути апаратну кнопку **"Home"**.
-* `adb shell input keyevent 82` — розблокувати екран.
+* Клік по екрану за координатами (X, Y):
+  ```bash
+  adb shell input tap <X> <Y>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell input tap 500 500
+  ```
+* Швидко вставити текст у поле (увага: не підтримує пробіли напряму):
+  ```bash
+  adb shell input text "<текст>"
+  ```
+  _Приклад:_
+  ```bash
+  adb shell input text "my_password"
+  ```
+* Натиснути апаратну кнопку **"Назад"**:
+  ```bash
+  adb shell input keyevent 4
+  ```
+* Натиснути апаратну кнопку **"Home"**:
+  ```bash
+  adb shell input keyevent 3
+  ```
+* Розблокувати екран:
+  ```bash
+  adb shell input keyevent 82
+  ```
 
 ---
 
 <a name="section7"></a>
 ## 7. Корисні налаштування розробника
 
-* `adb shell cmd uimode night yes` — **Увімкнути темну тему**.
-* `adb shell cmd uimode night no` — **Увімкнути світлу тему**.
-* `adb shell settings put global transition_animation_scale 0` — **Вимкнути анімації** (швидше працюють автотести).
-* `adb shell dumpsys meminfo com.example.app` — подивитись скільки оперативної пам'яті їсть ваш додаток.
-* `adb shell screenrecord /sdcard/video.mp4` — записати відео роботи екрана (зупинити: Ctrl+C).
+* **Увімкнути темну тему**:
+  ```bash
+  adb shell cmd uimode night yes
+  ```
+* **Увімкнути світлу тему**:
+  ```bash
+  adb shell cmd uimode night no
+  ```
+* **Вимкнути анімації** (швидше працюють автотести):
+  ```bash
+  adb shell settings put global transition_animation_scale 0
+  ```
+* Подивитись скільки оперативної пам'яті їсть ваш додаток:
+  ```bash
+  adb shell dumpsys meminfo <назва_пакета>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell dumpsys meminfo com.example.app
+  ```
+* Записати відео роботи екрана (зупинити: Ctrl+C):
+  ```bash
+  adb shell screenrecord <шлях_збереження_на_пристрої>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell screenrecord /sdcard/video.mp4
+  ```
 
 ---
 
@@ -318,31 +510,120 @@ adb shell am start -n com.example.app/.DetailsActivity \
 
 Оскільки Android базується на ядрі Linux, ви можете використовувати стандартні Unix-утиліти для моніторингу процесів на низькому рівні. Це корисно для глибокого дебагінгу.
 
-* `adb shell ps` або `adb shell ps -A` — відобразити список усіх активних процесів у системі.
-* `adb shell pidof com.example.app` — дізнатися числовий ідентифікатор (PID) конкретного пакета (додатка).
-* `adb shell top -n 1` — переглянути поточне завантаження процесора (CPU) різними процесами.
-* `adb shell kill <PID>` — м'яко завершити процес за його PID (відправити SIGTERM).
-* `adb shell kill -9 <PID>` — примусово знищити процес сигналом SIGKILL (жорстке завершення).
-* `adb shell cat /proc/<PID>/status` — вивести детальний системний статус процесу.
-* `adb shell dumpsys gfxinfo com.example.app framestats` — переглянути статистику швидкості рендерингу кадрів (корисно для пошуку UI-лагів).
+* Відобразити список усіх активних процесів у системі:
+  ```bash
+  adb shell ps
+  # або
+  adb shell ps -A
+  ```
+* Дізнатися числовий ідентифікатор (PID) конкретного пакета (додатка):
+  ```bash
+  adb shell pidof <назва_пакета>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell pidof com.example.app
+  ```
+* Переглянути поточне завантаження процесора (CPU) різними процесами:
+  ```bash
+  adb shell top -n 1
+  ```
+* М'яко завершити процес за його PID (відправити SIGTERM):
+  ```bash
+  adb shell kill <PID>
+  ```
+* Примусово знищити процес сигналом SIGKILL (жорстке завершення):
+  ```bash
+  adb shell kill -9 <PID>
+  ```
+* Вивести детальний системний статус процесу:
+  ```bash
+  adb shell cat /proc/<PID>/status
+  ```
+* Переглянути статистику швидкості рендерингу кадрів (корисно для пошуку UI-лагів):
+  ```bash
+  adb shell dumpsys gfxinfo <назва_пакета> framestats
+  ```
+  _Приклад:_
+  ```bash
+  adb shell dumpsys gfxinfo com.example.app framestats
+  ```
 
 ---
 
 <a name="section9"></a>
 ## 9. Системна інформація, мережа та налаштування
 
-* `adb shell getprop ro.build.version.release` — переглянути версію операційної системи Android.
-* `adb shell df -h` — відобразити зайняте та вільне місце на дискових розділах.
-* `adb shell free` — показати статистику використання оперативної пам'яті.
-* `adb shell uname -a` — вивести системну інформацію про версію ядра Linux.
-* `adb shell ifconfig` або `adb shell ip addr` — переглянути конфігурацію мережевих інтерфейсів та IP-адреси.
-* `adb shell ping google.com` — перевірити доступність мережевого вузла.
-* `adb shell netstat -an` — показати перелік відкритих портів та з'єднань.
-* `adb shell ss -tulnp` — вивести статистику використання мережевих сокетів.
-* `adb shell settings get system screen_brightness` — отримати поточне системне значення параметра.
-* `adb shell settings put system screen_brightness 150` — записати нове значення системного налаштування.
-* `adb shell screencap /sdcard/screen.png` — зробити знімок екрана та зберегти на девайсі.
-* `adb shell screenrecord /sdcard/video.mp4` — записати відео роботи інтерфейсу в файл.
+* Переглянути версію операційної системи Android:
+  ```bash
+  adb shell getprop ro.build.version.release
+  ```
+* Відобразити зайняте та вільне місце на дискових розділах:
+  ```bash
+  adb shell df -h
+  ```
+* Показати статистику використання оперативної пам'яті:
+  ```bash
+  adb shell free
+  ```
+* Вивести системну інформацію про версію ядра Linux:
+  ```bash
+  adb shell uname -a
+  ```
+* Переглянути конфігурацію мережевих інтерфейсів та IP-адреси:
+  ```bash
+  adb shell ifconfig
+  # або
+  adb shell ip addr
+  ```
+* Перевірити доступність мережевого вузла:
+  ```bash
+  adb shell ping <адреса>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell ping google.com
+  ```
+* Показати перелік відкритих портів та з'єднань:
+  ```bash
+  adb shell netstat -an
+  ```
+* Вивести статистику використання мережевих сокетів:
+  ```bash
+  adb shell ss -tulnp
+  ```
+* Отримати поточне системне значення параметра:
+  ```bash
+  adb shell settings get <namespace> <ключ>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell settings get system screen_brightness
+  ```
+* Записати нове значення системного налаштування:
+  ```bash
+  adb shell settings put <namespace> <ключ> <значення>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell settings put system screen_brightness 150
+  ```
+* Зробити знімок екрана та зберегти на девайсі:
+  ```bash
+  adb shell screencap <шлях_збереження>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell screencap /sdcard/screen.png
+  ```
+* Записати відео роботи інтерфейсу в файл на девайсі:
+  ```bash
+  adb shell screenrecord <шлях_збереження>
+  ```
+  _Приклад:_
+  ```bash
+  adb shell screenrecord /sdcard/video.mp4
+  ```
 
 ---
 
