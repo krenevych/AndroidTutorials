@@ -6,36 +6,7 @@ Gradle — це потужна система автоматизації збі�
 
 ---
 
-## 1. Структура Android-проекту з Gradle
-
-Коли ви створюєте новий проект в Android Studio, генерується стандартна структура директорій. Налаштування розділяються на глобальні (для всього проекту) та локальні (для конкретних модулів).
-
-```text
-MyApplication/
-├── gradle/
-│   ├── wrapper/
-│   │   └── gradle-wrapper.properties  # Точна версія Gradle для збірки
-│   └── libs.versions.toml             # Каталог версій залежностей (Version Catalog)
-├── gradlew                            # Скрипт запуску Gradle Wrapper для macOS/Linux
-├── gradlew.bat                        # Скрипт запуску Gradle Wrapper для Windows
-├── gradle.properties                  # Системні налаштування (JVM, кешування, AndroidX)
-├── settings.gradle.kts                # Опис репозиторіїв та перелік модулів проекту
-├── build.gradle.kts                   # Кореневий файл збірки (загальні плагіни)
-├── local.properties                   # Локальні конфігурації (шлях до SDK), не додається в Git
-└── app/
-    ├── build.gradle.kts               # Конфігурація конкретного модуля (додатка)
-    └── src/
-        ├── main/                      # Основний код додатка
-        │   ├── AndroidManifest.xml    # Головний конфігураційний файл
-        │   ├── java/ (або kotlin/)    # Вихідний код
-        │   └── res/                   # Ресурси (layout, strings, drawable)
-        ├── test/                      # Локальні юніт-тести (JVM)
-        └── androidTest/               # Інструментальні тести (Емулятор / Пристрій)
-```
-
----
-
-## 2. Gradle Wrapper (`gradlew`) та базові команди
+## 1. Gradle Wrapper (`gradlew`) та базові команди
 
 **Gradle Wrapper** гарантує, що всі розробники та CI/CD сервери використовують однакову версію інструменту. Він автоматично завантажує Gradle за потреби.
 
@@ -77,6 +48,35 @@ MyApplication/
    ```bash
    ./gradlew --stop
    ```
+
+---
+
+## 2. Структура Android-проекту з Gradle
+
+Коли ви створюєте новий проект в Android Studio, генерується стандартна структура директорій. Налаштування розділяються на глобальні (для всього проекту) та локальні (для конкретних модулів).
+
+```text
+MyApplication/
+├── gradle/
+│   ├── wrapper/
+│   │   └── gradle-wrapper.properties  # Точна версія Gradle для збірки
+│   └── libs.versions.toml             # Каталог версій залежностей (Version Catalog)
+├── gradlew                            # Скрипт запуску Gradle Wrapper для macOS/Linux
+├── gradlew.bat                        # Скрипт запуску Gradle Wrapper для Windows
+├── gradle.properties                  # Системні налаштування (JVM, кешування, AndroidX)
+├── settings.gradle.kts                # Опис репозиторіїв та перелік модулів проекту
+├── build.gradle.kts                   # Кореневий файл збірки (загальні плагіни)
+├── local.properties                   # Локальні конфігурації (шлях до SDK), не додається в Git
+└── app/
+    ├── build.gradle.kts               # Конфігурація конкретного модуля (додатка)
+    └── src/
+        ├── main/                      # Основний код додатка
+        │   ├── AndroidManifest.xml    # Головний конфігураційний файл
+        │   ├── java/ (або kotlin/)    # Вихідний код
+        │   └── res/                   # Ресурси (layout, strings, drawable)
+        ├── test/                      # Локальні юніт-тести (JVM)
+        └── androidTest/               # Інструментальні тести (Емулятор / Пристрій)
+```
 
 ---
 
