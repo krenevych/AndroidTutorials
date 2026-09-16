@@ -224,9 +224,14 @@ dependencies {
 }
 ```
 
-> **Діагностика залежностей:**  
-> Якщо виникає конфлікт версій, використовуйте:  
-> `./gradlew :app:dependencies --configuration releaseRuntimeClasspath`
+### Аналіз дерева залежностей
+Іноді різні бібліотеки тягнуть різні версії однієї і тієї ж транзитивної залежності. Тоді виникає конфлікт версій. 
+
+Для проведення діагностики використовуйте такі команди:
+- `./gradlew :app:dependencies --configuration releaseRuntimeClasspath` — будує повне дерево залежностей.
+- `./gradlew :app:dependencyInsight --dependency <назва> --configuration releaseRuntimeClasspath` — детально показує, звідки підтягується конкретна бібліотека і як Gradle вирішує конфлікт версій (Resolution Strategy зазвичай обирає найновішу версію).
+
+
 
 ---
 
@@ -274,6 +279,18 @@ buildTypes {
 }
 ```
 
+### Мініфікація та Обфускація (R8 / ProGuard)
+R8 — це компілятор, який оптимізує, мініфікує (видаляє невикористаний код) та обфускує (змінює імена класів/методів) код релізної збірки. Це суттєво зменшує розмір фінального APK і ускладнює реверс-інжиніринг. Зазвичай вмикається тільки для релізних збірок.
+```kotlin
+buildTypes {
+    release {
+        isMinifyEnabled = true // вмикає обфускацію коду
+        isShrinkResources = true // видаляє невикористані ресурси (картинки, xml)
+        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+    }
+}
+```
+
 ---
 
 ## 6. Власні задачі (Custom Tasks) та Життєвий цикл
@@ -291,18 +308,23 @@ tasks.register("printProjectInfo") {
 // Запуск: ./gradlew printProjectInfo
 ```
 
-### Прив'язка до жипі циклу
-Можна автоматизувати дії, наприклад, копіювання файлів після збірки релізу:
+### Задача копіювання (`Copy`) та зв'язування задач
+Налаштування ланцюжків виконання (Task Dependency) дозволяє автоматизувати рутинні дії.
+Наприклад, копіювання файлів обфускації (mapping.txt) після збірки релізу в окрему архівну папку:
+
 ```kotlin
 val backupMappingFile by tasks.registering(Copy::class) {
+    // Вказуємо звідки і куди копіювати
     from(layout.buildDirectory.dir("outputs/mapping/release"))
     into(layout.buildDirectory.dir("reports/mappings_archive"))
 }
 
+// Прив'язуємо нашу задачу до існуючої задачі життєвого циклу
 tasks.named("assembleRelease") {
     finalizedBy(backupMappingFile) // Виконати задачу автоматично ПІСЛЯ assembleRelease
 }
 ```
+*(Можна також використовувати `dependsOn`, щоб ваша задача виконувалась ДО вказаної).*
 
 ---
 
