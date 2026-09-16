@@ -175,6 +175,14 @@ dependencies {
 Сучасний стандарт в Android — виносити централізовану конфігурацію версій усіх бібліотек у файл `gradle/libs.versions.toml` (так званий Version Catalog).
 
 ### Структура `libs.versions.toml`
+
+- `[versions]` — зберігає версії.
+- `[libraries]` — оголошує самі залежності (бібліотеки).
+- `[plugins]` — підключені плагіни.
+- `[bundles]` — дозволяє об'єднувати декілька бібліотек під одним іменем.
+
+**Приклад:**
+
 ```toml
 [versions]
 kotlin = "2.0.20"
@@ -196,13 +204,15 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ```
 
 ### Підключення в `app/build.gradle.kts`
-Залежності мають різні "зони видимості" (Scopes):
 
-* **`implementation`**: Основна залежність; пакується в APK та доступна в коді.
+Залежності додаються у блоці `dependencies`. 
+Вони мають різні "зони видимості" (Scopes):
+
+* **`implementation`**: Основна залежність; бібліотека потрапить у кінцевий APK та буде доступна в коді додатку.
+* **`testImplementation`**: Залежність тільки для локальних Unit-тестів (наприклад, JUnit, директорія `src/test/`). Вона **не потрапляє** у фінальний APK-файл.
+* **`androidTestImplementation`**: Тільки для інструментальних тестів (`src/androidTest/`).
 * **`api`**: Пакується в збірку та транслюється іншим залежним модулям.
 * **`compileOnly`**: Потрібна лише під час компіляції (не потрапляє в APK).
-* **`testImplementation`**: Тільки для локальних тестів (`src/test/`).
-* **`androidTestImplementation`**: Тільки для інструментальних тестів (`src/androidTest/`).
 
 ```kotlin
 dependencies {
