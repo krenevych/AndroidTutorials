@@ -45,16 +45,38 @@ MyApplication/
 
 ### Основні команди CLI
 
-| Команда | Опис |
-| :--- | :--- |
-| `./gradlew --version` | Вивести інформацію про версію Gradle, JVM та ОС. |
-| `./gradlew tasks` | Переглянути список усіх доступних задач збірки. |
-| `./gradlew clean` | Очистити директорію `build/` (видалити проміжні артефакти). |
-| `./gradlew assembleDebug` | Зібрати налагоджувальний APK. Результат: `app/build/outputs/apk/debug/app-debug.apk`. |
-| `./gradlew assembleRelease` | Зібрати оптимізований релізний APK. |
-| `./gradlew installDebug` | Зібрати debug-версію та одразу встановити на підключений девайс. |
-| `./gradlew test` | Запустити локальні юніт-тести (JUnit). |
-| `./gradlew --stop` | Примусово завершити всі фонові процеси (Gradle Daemons). |
+1. Вивести інформацію про версію Gradle, JVM та ОС:
+   ```bash
+   ./gradlew --version
+   ```
+2. Переглянути список усіх доступних задач збірки:
+   ```bash
+   ./gradlew tasks
+   ```
+3. Очистити директорію `build/` (видалити проміжні артефакти):
+   ```bash
+   ./gradlew clean
+   ```
+4. Зібрати налагоджувальний APK. Результат зберігається в `app/build/outputs/apk/debug/app-debug.apk`:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+5. Зібрати оптимізований релізний APK:
+   ```bash
+   ./gradlew assembleRelease
+   ```
+6. Зібрати debug-версію та одразу встановити на підключений девайс:
+   ```bash
+   ./gradlew installDebug
+   ```
+7. Запустити локальні юніт-тести (JUnit):
+   ```bash
+   ./gradlew test
+   ```
+8. Примусово завершити всі фонові процеси (Gradle Daemons):
+   ```bash
+   ./gradlew --stop
+   ```
 
 ---
 
