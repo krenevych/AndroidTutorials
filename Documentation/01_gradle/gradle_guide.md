@@ -167,6 +167,10 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
 }
 ```
+> **Анатомія залежності:** У рядку `"com.squareup.retrofit2:retrofit:2.9.0"`:
+> * `com.squareup.retrofit2` — це **group ID** (організація або проект, що створила бібліотеку).
+> * `retrofit` — це **artifact ID** (конкретна назва самої бібліотеки).
+> * `2.9.0` — це **версія** бібліотеки.
 
 Сучасний стандарт в Android — виносити централізовану конфігурацію версій усіх бібліотек у файл `gradle/libs.versions.toml` (так званий Version Catalog).
 
