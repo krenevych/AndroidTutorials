@@ -25,27 +25,27 @@
 Ось приблизний вигляд найпростішого варіанту цього екрану (зверху вниз):
 
 <div align="center">
-  <table border="1" cellpadding="15" cellspacing="0" style="font-family: sans-serif; text-align: center; border-collapse: collapse; background-color: #f4f4f4; width: 300px;">
+  <table style="font-family: sans-serif; text-align: center; border-collapse: collapse; width: 100%; max-width: 200px; border: 1px solid #ccc; background-color: #f4f4f4; margin: 0 auto; table-layout: fixed;">
     <tr>
-      <td style="background-color: #ffffff; color: #888888; text-align: left; border-bottom: 2px solid #6200EE;"><i>Введіть перше число</i></td>
+      <td style="background-color: #ffffff; color: #888888; text-align: left; padding: 15px; border-bottom: 2px solid #6200EE;"><i>Введіть перше число</i></td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; color: #888888; text-align: left; border-bottom: 2px solid #6200EE;"><i>Введіть друге число</i></td>
+      <td style="background-color: #ffffff; color: #888888; text-align: left; padding: 15px; border-bottom: 2px solid #6200EE;"><i>Введіть друге число</i></td>
     </tr>
     <tr>
-      <td style="padding: 0; border: none; background-color: transparent;">
-        <table width="100%" cellpadding="10" cellspacing="5" style="margin-top: 10px;">
+      <td style="padding: 15px; background-color: #ffffff;">
+        <table width="100%" style="border-collapse: separate; border-spacing: 5px;">
           <tr>
-            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">+</td>
-            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">-</td>
-            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">*</td>
-            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">/</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; padding: 10px; border-radius: 4px; border: 1px solid #bbb; width: 25%;">+</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; padding: 10px; border-radius: 4px; border: 1px solid #bbb; width: 25%;">-</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; padding: 10px; border-radius: 4px; border: 1px solid #bbb; width: 25%;">*</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; padding: 10px; border-radius: 4px; border: 1px solid #bbb; width: 25%;">/</td>
           </tr>
         </table>
       </td>
     </tr>
     <tr>
-      <td style="padding-top: 20px; font-size: 18px; font-weight: bold; background-color: #f4f4f4;">Результат: [число]</td>
+      <td style="padding: 20px; font-size: 18px; font-weight: bold; background-color: #f4f4f4; border-top: 1px solid #ccc;">Результат: [число]</td>
     </tr>
   </table>
 </div>

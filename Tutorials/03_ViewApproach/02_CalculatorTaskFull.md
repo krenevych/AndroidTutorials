@@ -21,40 +21,40 @@
 ### Візуальна схема (Мокап)
 Ось приблизно як має виглядати ваш калькулятор на екрані пристрою (це схема для орієнтиру, можете зробити свій дизайн):
 
-<div align="center">
-  <table border="1" cellpadding="15" cellspacing="0" style="font-family: sans-serif; text-align: center; border-collapse: collapse; background-color: #f4f4f4;">
+<div>
+  <table style="width: 100%; max-width: 198px; border-collapse: collapse; font-family: sans-serif; text-align: center; table-layout: fixed; border: 1px solid #ccc; margin: 0 auto;">
     <tr>
-      <td colspan="4" style="text-align: right; font-size: 32px; padding: 20px; background-color: #e0e0e0; font-family: monospace;"><b>3.141592</b></td>
+      <td colspan="4" style="text-align: right; font-size: 32px; padding: 20px; background-color: #e0e0e0; font-family: monospace; border: 1px solid #ccc;"><b>3.141592</b></td>
     </tr>
     <tr style="font-size: 20px;">
-      <td style="width: 60px; height: 60px; background-color: #ffcccc;"><b>C</b></td>
-      <td style="width: 60px; height: 60px; background-color: #dcdcdc;"><b>()</b></td>
-      <td style="width: 60px; height: 60px; background-color: #dcdcdc;"><b>%</b></td>
-      <td style="width: 60px; height: 60px; background-color: #ffe4b5;"><b>/</b></td>
+      <td style="width: 25%; padding: 15px 0; background-color: #ffcccc; border: 1px solid #ccc;"><b>C</b></td>
+      <td style="width: 25%; padding: 15px 0; background-color: #dcdcdc; border: 1px solid #ccc;"><b>()</b></td>
+      <td style="width: 25%; padding: 15px 0; background-color: #dcdcdc; border: 1px solid #ccc;"><b>%</b></td>
+      <td style="width: 25%; padding: 15px 0; background-color: #ffe4b5; border: 1px solid #ccc;"><b>/</b></td>
     </tr>
     <tr style="font-size: 20px;">
-      <td style="height: 60px; background-color: #ffffff;"><b>7</b></td>
-      <td style="background-color: #ffffff;"><b>8</b></td>
-      <td style="background-color: #ffffff;"><b>9</b></td>
-      <td style="background-color: #ffe4b5;"><b>*</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>7</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>8</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>9</b></td>
+      <td style="padding: 15px 0; background-color: #ffe4b5; border: 1px solid #ccc;"><b>*</b></td>
     </tr>
     <tr style="font-size: 20px;">
-      <td style="height: 60px; background-color: #ffffff;"><b>4</b></td>
-      <td style="background-color: #ffffff;"><b>5</b></td>
-      <td style="background-color: #ffffff;"><b>6</b></td>
-      <td style="background-color: #ffe4b5;"><b>-</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>4</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>5</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>6</b></td>
+      <td style="padding: 15px 0; background-color: #ffe4b5; border: 1px solid #ccc;"><b>-</b></td>
     </tr>
     <tr style="font-size: 20px;">
-      <td style="height: 60px; background-color: #ffffff;"><b>1</b></td>
-      <td style="background-color: #ffffff;"><b>2</b></td>
-      <td style="background-color: #ffffff;"><b>3</b></td>
-      <td style="background-color: #ffe4b5;"><b>+</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>1</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>2</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>3</b></td>
+      <td style="padding: 15px 0; background-color: #ffe4b5; border: 1px solid #ccc;"><b>+</b></td>
     </tr>
     <tr style="font-size: 20px;">
-      <td style="height: 60px; background-color: #ffffff;"><b>0</b></td>
-      <td style="background-color: #ffffff;"><b>.</b></td>
-      <td style="background-color: #dcdcdc;"><b>⌫</b></td>
-      <td style="background-color: #ffe4b5;"><b>=</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>0</b></td>
+      <td style="padding: 15px 0; background-color: #ffffff; border: 1px solid #ccc;"><b>.</b></td>
+      <td style="padding: 15px 0; background-color: #dcdcdc; border: 1px solid #ccc;"><b>⌫</b></td>
+      <td style="padding: 15px 0; background-color: #ffe4b5; border: 1px solid #ccc;"><b>=</b></td>
     </tr>
   </table>
 </div>
