@@ -21,6 +21,36 @@
 3. **Текстове поле (TextView):**
    * Для відображення результату обчислення або повідомлення про помилку.
 
+### Візуальна схема (Мокап)
+Ось приблизний вигляд найпростішого варіанту цього екрану (зверху вниз):
+
+<div align="center">
+  <table border="1" cellpadding="15" cellspacing="0" style="font-family: sans-serif; text-align: center; border-collapse: collapse; background-color: #f4f4f4; width: 300px;">
+    <tr>
+      <td style="background-color: #ffffff; color: #888888; text-align: left; border-bottom: 2px solid #6200EE;"><i>Введіть перше число</i></td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; color: #888888; text-align: left; border-bottom: 2px solid #6200EE;"><i>Введіть друге число</i></td>
+    </tr>
+    <tr>
+      <td style="padding: 0; border: none; background-color: transparent;">
+        <table width="100%" cellpadding="10" cellspacing="5" style="margin-top: 10px;">
+          <tr>
+            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">+</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">-</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">*</td>
+            <td style="background-color: #e0e0e0; font-weight: bold; border-radius: 4px;">/</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top: 20px; font-size: 18px; font-weight: bold; background-color: #f4f4f4;">Результат: [число]</td>
+    </tr>
+  </table>
+</div>
+<br/>
+
 ## Технічні вимоги (Логіка)
 
 1. Проект повинен використовувати класичний метод **`findViewById`** (не використовуйте `ViewBinding`).

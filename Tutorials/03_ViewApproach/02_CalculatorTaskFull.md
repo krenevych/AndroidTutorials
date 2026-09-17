@@ -18,6 +18,48 @@
    * Кнопка очищення: `C` (Clear).
    * *Порада:* Для рівномірного розміщення такої кількості кнопок у вигляді сітки найкраще підійде `GridLayout` або сучасний `ConstraintLayout`. У випадку `GridLayout` ви можете задати кількість колонок (наприклад, `android:columnCount="4"`).
 
+### Візуальна схема (Мокап)
+Ось приблизно як має виглядати ваш калькулятор на екрані пристрою (це схема для орієнтиру, можете зробити свій дизайн):
+
+<div align="center">
+  <table border="1" cellpadding="15" cellspacing="0" style="font-family: sans-serif; text-align: center; border-collapse: collapse; background-color: #f4f4f4;">
+    <tr>
+      <td colspan="4" style="text-align: right; font-size: 32px; padding: 20px; background-color: #e0e0e0; font-family: monospace;"><b>3.141592</b></td>
+    </tr>
+    <tr style="font-size: 20px;">
+      <td style="width: 60px; height: 60px; background-color: #ffcccc;"><b>C</b></td>
+      <td style="width: 60px; height: 60px; background-color: #dcdcdc;"><b>()</b></td>
+      <td style="width: 60px; height: 60px; background-color: #dcdcdc;"><b>%</b></td>
+      <td style="width: 60px; height: 60px; background-color: #ffe4b5;"><b>/</b></td>
+    </tr>
+    <tr style="font-size: 20px;">
+      <td style="height: 60px; background-color: #ffffff;"><b>7</b></td>
+      <td style="background-color: #ffffff;"><b>8</b></td>
+      <td style="background-color: #ffffff;"><b>9</b></td>
+      <td style="background-color: #ffe4b5;"><b>*</b></td>
+    </tr>
+    <tr style="font-size: 20px;">
+      <td style="height: 60px; background-color: #ffffff;"><b>4</b></td>
+      <td style="background-color: #ffffff;"><b>5</b></td>
+      <td style="background-color: #ffffff;"><b>6</b></td>
+      <td style="background-color: #ffe4b5;"><b>-</b></td>
+    </tr>
+    <tr style="font-size: 20px;">
+      <td style="height: 60px; background-color: #ffffff;"><b>1</b></td>
+      <td style="background-color: #ffffff;"><b>2</b></td>
+      <td style="background-color: #ffffff;"><b>3</b></td>
+      <td style="background-color: #ffe4b5;"><b>+</b></td>
+    </tr>
+    <tr style="font-size: 20px;">
+      <td style="height: 60px; background-color: #ffffff;"><b>0</b></td>
+      <td style="background-color: #ffffff;"><b>.</b></td>
+      <td style="background-color: #dcdcdc;"><b>⌫</b></td>
+      <td style="background-color: #ffe4b5;"><b>=</b></td>
+    </tr>
+  </table>
+</div>
+<br/>
+
 ## Технічні вимоги (Логіка)
 
 1. Проект **обов'язково** повинен використовувати **ViewBinding** (оскільки кнопок дуже багато, використання `findViewById` заборонено — це зробить код занадто громіздким).
