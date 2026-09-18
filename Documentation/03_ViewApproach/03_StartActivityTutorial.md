@@ -247,6 +247,29 @@ btnCall.setOnClickListener {
 >     <data android:mimeType="text/plain" />
 > </intent-filter>
 > ```
+> 
+> **А коли варто створювати декілька окремих `<intent-filter>`?**
+> Хоча дії всередині одного фільтра працюють за принципом "АБО", теги `<data>` застосовуються до **всіх** дій у цьому фільтрі одночасно. Тому, якщо ваші дії вимагають різних форматів даних (або одна вимагає даних, а інша — ні), їх **обов'язково** потрібно розносити у різні фільтри.
+> 
+> *Приклад: Ваш застосунок має з'являтися на робочому столі (`MAIN`), але також він вміє здійснювати дзвінки (`DIAL`). Дія `MAIN` запускається без жодних вхідних даних, а `DIAL` обов'язково очікує номер телефону (`<data android:scheme="tel" />`). Якщо ви об'єднаєте їх в один фільтр, система не покаже вашу іконку на робочому столі, бо вирішить, що для запуску програми обов'язково потрібен номер телефону. Правильно робити так:*
+> ```xml
+> <activity android:name=".DialerActivity" android:exported="true">
+>     
+>     <!-- Фільтр 1: Запуск з робочого столу (ніяких даних не потрібно) -->
+>     <intent-filter>
+>         <action android:name="android.intent.action.MAIN" />
+>         <category android:name="android.intent.category.LAUNCHER" />
+>     </intent-filter>
+> 
+>     <!-- Фільтр 2: Перехоплення дзвінків (очікує номер телефону) -->
+>     <intent-filter>
+>         <action android:name="android.intent.action.DIAL" />
+>         <category android:name="android.intent.category.DEFAULT" />
+>         <data android:scheme="tel" />
+>     </intent-filter>
+> 
+> </activity>
+> ```
 
 Отже, **Intent Filter** — це спосіб для Activity заявити операційній системі про те, які неявні інтенти вона здатна обробляти.
 
