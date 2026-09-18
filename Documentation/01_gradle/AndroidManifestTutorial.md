@@ -29,11 +29,11 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"         <!-- Іконка застосунку -->
-        android:label="@string/app_name"           <!-- Назва застосунку -->
-        android:roundIcon="@mipmap/ic_launcher_round" <!-- Кругла іконка -->
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyApplication" <!-- Тема оформлення -->
+        android:theme="@style/Theme.MyApplication"
         tools:targetApi="31">
 
         <!-- ОГОЛОШЕННЯ ЕКРАНУ (Activity) -->
