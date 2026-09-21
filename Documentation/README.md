@@ -16,3 +16,4 @@
 
 ## 04. Життєвий цикл (Lifecycle)
 * [Application (`01_Application.md`)](04_Lifecycle/01_Application.md) — розбір того, як влаштовані процеси в Android, що таке Application Sandbox та навіщо створювати власний клас-спадкоємець `Application`.
+* [Activity Lifecycle (`02_ActivityLifecycle.md`)](04_Lifecycle/02_ActivityLifecycle.md) — детальний розбір станів життєвого циклу екрану (від `onCreate` до `onDestroy`), візуальна схема та опис того, що відбувається під час повороту пристрою чи згортання застосунку.
