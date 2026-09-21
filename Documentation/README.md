@@ -15,4 +15,4 @@
 * [Навігація (Intents) (`03_StartActivityTutorial.md`)](03_ViewApproach/03_StartActivityTutorial.md) — як відкривати нові екрани, передавати між ними дані та використовувати неявні інтенти (виклик браузера, пошти тощо) та як працюють Intent Filters.
 
 ## 04. Життєвий цикл (Lifecycle)
-* [Application (`ApplicationTutorial.md`)](04_Lifecycle/ApplicationTutorial.md) — розбір того, як влаштовані процеси в Android, що таке Application Sandbox та навіщо створювати власний клас-спадкоємець `Application`.
+* [Application (`01_Application.md`)](04_Lifecycle/01_Application.md) — розбір того, як влаштовані процеси в Android, що таке Application Sandbox та навіщо створювати власний клас-спадкоємець `Application`.
