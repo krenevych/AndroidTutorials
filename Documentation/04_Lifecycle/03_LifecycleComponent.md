@@ -193,34 +193,53 @@ if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
 
 ## 5. Спостереження за кожною Activity з класу Application
 
-Якщо вам потрібно централізовано відстежувати події створення, запуску чи знищення **кожної окремої Activity** у вашій системі, клас `Application` має вбудований метод [`registerActivityLifecycleCallbacks`](https://developer.android.com/reference/kotlin/android/app/Application.ActivityLifecycleCallbacks):
+Якщо вам потрібно централізовано відстежувати події створення, запуску чи знищення **кожної окремої Activity** у вашому застосунку, ви можете скористатися методом `registerActivityLifecycleCallbacks(...)` класу `Application`. Цей метод приймає об'єкт інтерфейсу [`Application.ActivityLifecycleCallbacks`](https://developer.android.com/reference/kotlin/android/app/Application.ActivityLifecycleCallbacks), який і містить усі необхідні колбеки для відстеження стану екранів.
 
+Найкращою практикою є винесення цієї логіки в окремий клас:
+
+**Крок 1. Створюємо клас-колбек:**
+```kotlin
+import android.app.Activity
+import android.app.Application
+import android.os.Bundle
+import timber.log.Timber
+
+class ActivityLoggerCallbacks : Application.ActivityLifecycleCallbacks {
+    
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        Timber.d("Створено Activity: ${activity.javaClass.simpleName}")
+    }
+
+    override fun onActivityStarted(activity: Activity) {}
+    override fun onActivityResumed(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityStopped(activity: Activity) {}
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+    
+    override fun onActivityDestroyed(activity: Activity) {
+        Timber.d("Знищено Activity: ${activity.javaClass.simpleName}")
+    }
+}
+```
+
+**Крок 2. Реєструємо його у вашому `Application`:**
 ```kotlin
 class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
 
-       // ініціалізація Timber
-       
-        registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                Timber.d("Створено Activity: ${activity.javaClass.simpleName}")
-            }
+        // ініціалізація Timber
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
 
-            override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityResumed(activity: Activity) {}
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivityStopped(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {
-                Timber.d("Знищено Activity: ${activity.javaClass.simpleName}")
-            }
-        })
+        // Передаємо екземпляр нашого кастомного класу
+        registerActivityLifecycleCallbacks(ActivityLoggerCallbacks())
     }
 }
 ```
-* **Як це працює:** Цей метод приймає об'єкт, що реалізує інтерфейс `Application.ActivityLifecycleCallbacks`. Системні колбеки викликаються для кожної Activity вашого застосунку, передаючи пряме посилання на екземпляр цієї `Activity`.
+* **Як це працює:** Метод `registerActivityLifecycleCallbacks` приймає об'єкт, що реалізує інтерфейс `Application.ActivityLifecycleCallbacks`. Системні колбеки викликаються для кожної Activity вашого застосунку, передаючи пряме посилання на екземпляр цієї `Activity`. Винесення логіки в окремий клас залишає `MyApplication` чистим і полегшує тестування.
 
 ---
 
@@ -235,25 +254,38 @@ class MyApplication : Application() {
    implementation("androidx.lifecycle:lifecycle-process:2.8.0")
    ```
 
-2. Зареєструйте Observer у вашому класі `Application`:
+2. **Створіть клас-спостерігач:**
+   ```kotlin
+   import androidx.lifecycle.DefaultLifecycleObserver
+   import androidx.lifecycle.LifecycleOwner
+   import timber.log.Timber
+
+   class AppLifecycleObserver : DefaultLifecycleObserver {
+
+       override fun onStart(owner: LifecycleOwner) {
+           Timber.d("Застосунок перейшов у FOREGROUND (видимий)")
+       }
+
+       override fun onStop(owner: LifecycleOwner) {
+           Timber.d("Застосунок перейшов у BACKGROUND (згорнутий)")
+       }
+   }
+   ```
+
+3. **Зареєструйте Observer у вашому класі `Application`:**
    ```kotlin
    class MyApplication : Application() {
 
        override fun onCreate() {
            super.onCreate()
-   
-          // ініціалізація Timber
+
+           // ініціалізація Timber
+           if (BuildConfig.DEBUG) {
+               Timber.plant(Timber.DebugTree())
+           }
 
            // Підписуємося на життєвий цикл всього ПРОЦЕСУ застосунку
-           ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-               override fun onStart(owner: LifecycleOwner) {
-                   Timber.d("Застосунок перейшов у FOREGROUND (видимий)")
-               }
-
-               override fun onStop(owner: LifecycleOwner) {
-                   Timber.d("Застосунок перейшов у BACKGROUND (згорнутий)")
-               }
-           })
+           ProcessLifecycleOwner.get().lifecycle.addObserver(AppLifecycleObserver())
        }
    }
    ```
@@ -263,7 +295,10 @@ class MyApplication : Application() {
 
 ## Підсумок
 
-* **`LifecycleOwner`** — це той, **хто має** життєвий цикл (наприклад, `Activity` чи `Fragment`).
-* **`LifecycleObserver`** (`DefaultLifecycleObserver`) — це той, **хто реагує** на події життєвого циклу.
-* **`lifecycle.addObserver()`** — зв'язує спостерігача з власником життєвого циклу.
-* Використання цієї тріади робить ваш код модульним, запобігає витокам пам'яті (Memory Leaks) та позбавляє від перевантажених `Activity`.
+* **`LifecycleOwner`** — це компонент, **хто має** життєвий цикл (наприклад, `Activity` чи `Fragment`).
+* **`LifecycleObserver`** — це клас, **хто реагує** на події життєвого циклу (використовуйте `DefaultLifecycleObserver` для окремих методів або `LifecycleEventObserver` для обробки всіх подій в одному місці).
+* **`lifecycle.addObserver()` / `removeObserver()`** — підписують або відписують спостерігача. При досягненні стану `DESTROYED` система відписує спостерігачі автоматично для запобігання витокам пам'яті.
+* **`lifecycle.currentState`** — дозволяє безпечно перевірити поточний стан екрану (наприклад, через `isAtLeast(Lifecycle.State.STARTED)`).
+* **`registerActivityLifecycleCallbacks`** — дозволяє класу `Application` централізовано відстежувати створення та знищення кожної `Activity` у системі.
+* **`ProcessLifecycleOwner`** — представляє життєвий цикл усього процесу програми та дозволяє легко визначати, коли застосунок у цілому виходить на передній план (`FOREGROUND`) чи ховається у фон (`BACKGROUND`).
+* Застосування Jetpack Lifecycle робить ваш код модульним, безпечним та позбавляє від появи перевантажених "Fat Activities".
