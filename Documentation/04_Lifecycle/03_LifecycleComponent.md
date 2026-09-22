@@ -65,8 +65,53 @@ class MainActivity : AppCompatActivity() {
 Це об'єкт, який **має** життєвий цикл. Інтерфейс містить лише один метод: `getLifecycle(): Lifecycle`.
 Усі сучасні базові класи Android (такі як `AppCompatActivity`, `ComponentActivity`, `Fragment`) вже імплементують інтерфейс `LifecycleOwner`.
 
-### 3. [`LifecycleObserver`](https://developer.android.com/reference/kotlin/androidx/lifecycle/LifecycleObserver) та [`DefaultLifecycleObserver`](https://developer.android.com/reference/kotlin/androidx/lifecycle/DefaultLifecycleObserver) (Інтерфейси)
-Це об'єкти, які хочуть **спостерігати** за життєвим циклом іншого компонента. На практиці для створення власних обзерверів рекомендується використовувати інтерфейс `DefaultLifecycleObserver`, який надає готові порожні методи для відстеження подій.
+### 3. [`LifecycleObserver`](https://developer.android.com/reference/kotlin/androidx/lifecycle/LifecycleObserver) та його нащадки [`DefaultLifecycleObserver`](https://developer.android.com/reference/kotlin/androidx/lifecycle/DefaultLifecycleObserver) і [`LifecycleEventObserver`](https://developer.android.com/reference/kotlin/androidx/lifecycle/LifecycleEventObserver)
+Це об'єкти, які хочуть **спостерігати** за життєвим циклом іншого компонента.
+
+Для створення власних спостерігачів в Android використовують два основних підходи:
+
+* **`DefaultLifecycleObserver`** *(Рекомендований)* — надає окремі готові методи (`onCreate`, `onStart`, `onResume`, `onPause`, `onStop`, `onDestroy`). Ви перевизначаєте лише ті з них, які вам дійсно потрібні:
+
+  ```kotlin
+  class MyDefaultObserver : DefaultLifecycleObserver {
+      override fun onStart(owner: LifecycleOwner) {
+          Timber.d("Екран став видимим")
+      }
+
+      override fun onStop(owner: LifecycleOwner) {
+          Timber.d("Екран заховався")
+      }
+  }
+  ```
+
+* **`LifecycleEventObserver`** — надає єдиний метод `onStateChanged(source: LifecycleOwner, event: Lifecycle.Event)`, який викликається при **будь-якій** події життєвого циклу. Всередині цього методу ви обробляєте потрібні події за допомогою конструкції `when (event)`:
+
+  ```kotlin
+  class MyEventObserver : LifecycleEventObserver {
+      override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+          when (event) {
+              Lifecycle.Event.ON_START -> Timber.d("Екран став видимим")
+              Lifecycle.Event.ON_STOP -> Timber.d("Екран заховався")
+              else -> {}
+          }
+      }
+  }
+  ```
+
+### 4. Реєстрація та видалення спостерігачів: `addObserver` та `removeObserver`
+Щоб зв'язати спостерігача з об'єктом, який має життєвий цикл (`LifecycleOwner`), використовуються спеціальні методи класу `Lifecycle`:
+
+* **[`addObserver(observer)`](https://developer.android.com/reference/kotlin/androidx/lifecycle/Lifecycle#addobserver)** — підписує спостерігача на життєвий цикл. З цього моменту спостерігач почне отримувати всі наступні події (а також поточний стан):
+  ```kotlin
+  val myObserver = MyDefaultObserver()
+  lifecycle.addObserver(myObserver)
+  ```
+* **[`removeObserver(observer)`](https://developer.android.com/reference/kotlin/androidx/lifecycle/Lifecycle#removeobserver)** — відписує спостерігача, якщо ви хочете припинити стеження за подіями раніше, ніж екран буде знищено:
+  ```kotlin
+  lifecycle.removeObserver(myObserver)
+  ```
+
+> 💡 **Важливо:** Якщо ви підписали обзервер на `Activity` чи `Fragment`, вам **не обов'язково** викликати `removeObserver` вручну під час закриття екрану. Коли `LifecycleOwner` досягає стану `DESTROYED`, система автоматично відписує всі зареєстровані спостерігачі, захищаючи вас від витоків пам'яті (Memory Leaks). Виклик `removeObserver` потрібен лише тоді, коли ви хочете зупинити спостереження достроково (наприклад, за певною умовою бізнес-логіки).
 
 ---
 
@@ -143,6 +188,76 @@ if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
 ```
 
 Метод `isAtLeast(State)` повертає `true`, якщо поточний стан є рівним або "вищим" у прапорцях життєвого циклу, ніж переданий стан.
+
+---
+
+## 5. Спостереження за кожною Activity з класу Application
+
+Якщо вам потрібно централізовано відстежувати події створення, запуску чи знищення **кожної окремої Activity** у вашій системі, клас `Application` має вбудований метод [`registerActivityLifecycleCallbacks`](https://developer.android.com/reference/kotlin/android/app/Application.ActivityLifecycleCallbacks):
+
+```kotlin
+class MyApplication : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+       // ініціалізація Timber
+       
+        registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                Timber.d("Створено Activity: ${activity.javaClass.simpleName}")
+            }
+
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {
+                Timber.d("Знищено Activity: ${activity.javaClass.simpleName}")
+            }
+        })
+    }
+}
+```
+* **Як це працює:** Цей метод приймає об'єкт, що реалізує інтерфейс `Application.ActivityLifecycleCallbacks`. Системні колбеки викликаються для кожної Activity вашого застосунку, передаючи пряме посилання на екземпляр цієї `Activity`.
+
+---
+
+## 6. Спостереження за життєвим циклом всього застосунку: ProcessLifecycleOwner
+
+Іноді виникає потреба знати не про окремі Activity, а про стан усієї програми загалом: коли весь застосунок переходить на передній план (Foreground) чи згортається у фон (Background) — незалежно від того, скільки екранів відкриває користувач.
+
+Для цього використовується спеціальний клас [`ProcessLifecycleOwner`](https://developer.android.com/reference/kotlin/androidx/lifecycle/ProcessLifecycleOwner).
+
+1. Додайте залежність у `build.gradle.kts`:
+   ```kotlin
+   implementation("androidx.lifecycle:lifecycle-process:2.8.0")
+   ```
+
+2. Зареєструйте Observer у вашому класі `Application`:
+   ```kotlin
+   class MyApplication : Application() {
+
+       override fun onCreate() {
+           super.onCreate()
+   
+          // ініціалізація Timber
+
+           // Підписуємося на життєвий цикл всього ПРОЦЕСУ застосунку
+           ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+               override fun onStart(owner: LifecycleOwner) {
+                   Timber.d("Застосунок перейшов у FOREGROUND (видимий)")
+               }
+
+               override fun onStop(owner: LifecycleOwner) {
+                   Timber.d("Застосунок перейшов у BACKGROUND (згорнутий)")
+               }
+           })
+       }
+   }
+   ```
+* **Як це працює:** `ProcessLifecycleOwner` розглядає весь процес програми як один великий `LifecycleOwner`. Він генерує події `ON_START`/`ON_RESUME`, коли відкривається перша Activity, і затримує виклик `ON_STOP`, щоб пересвідчитися, що користувач дійсно згорнув програму, а не просто перейшов між двома екранами.
 
 ---
 

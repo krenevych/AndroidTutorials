@@ -116,6 +116,109 @@ instance) і зберігати там, де він переживе зміну 
     * **Згортання:** натисніть кнопку Home на телефоні. Лічильник має впасти до нуля, і ви повинні побачити лог *"Застосунок тепер у ФОНІ (Background)"*.
     * **Відновлення:** відкрийте застосунок знову з меню недавніх. Лічильник має знову стати `1` і вивести лог *"Застосунок тепер ВИДИМИЙ на екрані (Foreground)"*.
 
-Успіхів! Це дуже розповсюджений патерн, який використовується в реальних додатках (наприклад, для
-того, щоб показати екран введення пін-коду, коли користувач повертається в банківський застосунок
-після його згортання).
+## Частина 5: Автоматизація за допомогою registerActivityLifecycleCallbacks
+
+У Частинах 1–4 ми прописували виклики детектора вручну у кожній Activity. Якщо в програмі 20 екранів, копіювати цей код у кожен з них — погана практика. 
+
+Фреймворк Android має вбудований механізм `Application.ActivityLifecycleCallbacks`, який дозволяє класу `Application` автоматично слухати старт та зупинку **будь-якої Activity** у застосунку!
+
+1. **Змініть `BackgroundDetector`:**
+   Зробіть так, щоб `BackgroundDetector` реалізовував інтерфейс `Application.ActivityLifecycleCallbacks`:
+   ```kotlin
+   import android.app.Activity
+   import android.app.Application
+   import android.os.Bundle
+   import timber.log.Timber // Переконайтеся, що Timber ініціалізовано у вашому MyApp
+
+   class BackgroundDetector : Application.ActivityLifecycleCallbacks {
+       private var activeActivitiesCount = 0
+
+       override fun onActivityStarted(activity: Activity) {
+           activeActivitiesCount++
+           if (activeActivitiesCount == 1) {
+               Timber.d("Застосунок тепер ВИДИМИЙ на екрані (Foreground)")
+           }
+       }
+
+       override fun onActivityStopped(activity: Activity) {
+           activeActivitiesCount--
+           if (activeActivitiesCount == 0) {
+               Timber.d("Застосунок тепер у ФОНІ (Background)")
+           }
+       }
+
+       // Порожні реалізації для інших методів інтерфейсу:
+       override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+       override fun onActivityResumed(activity: Activity) {}
+       override fun onActivityPaused(activity: Activity) {}
+       override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+       override fun onActivityDestroyed(activity: Activity) {}
+   }
+   ```
+
+2. **Зареєструйте в `Application`:**
+   У вашому класі `MyApp` у методі `onCreate()` додайте реєстрацію детектора:
+   ```kotlin
+   override fun onCreate() {
+       super.onCreate()
+   
+       // ініціалізація Timber
+   
+       registerActivityLifecycleCallbacks(backgroundDetector)
+   }
+   ```
+
+3. **Очистіть Activity:**
+   Повністю видаліть виклики `detector.onActivityStarted()` та `detector.onActivityStopped()` з `MainActivity` та `SecondActivity`. 
+
+4. **Протестуйте:**
+   Запустіть застосунок та перевірте в Logcat, що логіка лічильника та виводу повідомлень про видимість/фон працює точно так само, хоча класи Activity тепер взагалі не містять коду детектора!
+
+## Частина 6: Рефакторинг за допомогою ProcessLifecycleOwner та DefaultLifecycleObserver
+
+У Частині 5 ми позбулися коду в Activity, але змушені були тримати лічильник `activeActivitiesCount` та купу порожніх методів `ActivityLifecycleCallbacks`. 
+
+Якщо нам потрібен тільки статус всього застосунку (Foreground/Background), у Jetpack є ще досконаліший інструмент — `ProcessLifecycleOwner`.
+
+1. **Додайте залежність:**
+   У файл `build.gradle.kts` вашого модуля додайте бібліотеку:
+   ```kotlin
+   implementation("androidx.lifecycle:lifecycle-process:2.8.0")
+   ```
+
+2. **Модифікуйте `BackgroundDetector`:**
+   Змініть клас `BackgroundDetector` так, щоб він реалізовував інтерфейс `DefaultLifecycleObserver`:
+   ```kotlin
+   import androidx.lifecycle.DefaultLifecycleObserver
+   import androidx.lifecycle.LifecycleOwner
+   import timber.log.Timber // Переконайтеся, що Timber ініціалізовано у вашому MyApp
+
+   class BackgroundDetector : DefaultLifecycleObserver {
+       override fun onStart(owner: LifecycleOwner) {
+           Timber.d("Застосунок перейшов у FOREGROUND (видимий на екрані)")
+       }
+
+       override fun onStop(owner: LifecycleOwner) {
+           Timber.d("Застосунок перейшов у BACKGROUND (згорнутий у фон)")
+       }
+   }
+   ```
+   *(Зверніть увагу: більше немає ні лічильника, ні порожніх методів! `ProcessLifecycleOwner` сам відстежує життєвий цикл процесу під капотом).*
+
+3. **Зареєструйте в `Application`:**
+   Змініть реєстрацію у вашому класі `MyApp`:
+   ```kotlin
+   override fun onCreate() {
+       super.onCreate()
+       
+       // ініціалізація Timber
+   
+       ProcessLifecycleOwner.get().lifecycle.addObserver(BackgroundDetector())
+   }
+   ```
+
+4. **Повторіть тестування з Частини 4:**
+   Запустіть програму та перевірте Logcat. 
+   * Подивіться, як красиво і без жодного зайвого рядка коду вирішується ця задача за допомогою Jetpack Lifecycle!
+
+Успіхів! Це дуже розповсюджений патерн, який використовується в реальних додатках (наприклад, для того, щоб показати екран введення пін-коду, коли користувач повертається в банківський застосунок після його згортання).
