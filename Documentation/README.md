@@ -18,3 +18,4 @@
 * [Application (`01_Application.md`)](04_Lifecycle/01_Application.md) — розбір того, як влаштовані процеси в Android, що таке Application Sandbox та навіщо створювати власний клас-спадкоємець `Application`.
 * [Activity Lifecycle (`02_ActivityLifecycle.md`)](04_Lifecycle/02_ActivityLifecycle.md) — детальний розбір станів життєвого циклу екрану (від `onCreate` до `onDestroy`), візуальна схема та опис того, що відбувається під час повороту пристрою чи згортання застосунку.
 * [Jetpack Lifecycle (`03_LifecycleComponent.md`)](04_Lifecycle/03_LifecycleComponent.md) — використання архитектурних компонентів `LifecycleOwner`, `LifecycleObserver` (`DefaultLifecycleObserver`) та класу `Lifecycle` для створення Lifecycle-Aware компонентів.
+* [Context в Android (`04_Context.md`)](04_Lifecycle/04_Context.md) — що таке Context, різниця між `Activity Context` та `Application Context`, життєвий цикл контексту та як уникати витоків пам'яті (Memory Leaks).
