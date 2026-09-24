@@ -67,8 +67,27 @@ class MainActivity : AppCompatActivity() {
 
 ![Схема паттерну MVVM](res/MVVM.jpeg)
 
+Паттерн розділяє застосунок на три основні шари:
+
+* **View (Екран):** `Activity`, `Fragment` або ViewBinding. Вона відповідає **тільки** за відображення графічного інтерфейсу та відмальовку даних. `View` не містить складних обчислень і передає всі дії користувача (кліки) у `ViewModel`.
+* **ViewModel (Модель представлення):** Зберігає стан UI та готує дані для відображення. Вона переживає зміни конфігурації (поворот екрану) і не має прямих посилань на `View`.
+* **Model (Модель даних):** Шар, який відповідає за **роботу з даними та бізнес-правилами** застосунку.
+
+### Що входить до шару Model?
+Шар `Model` — це основа роботи з даними у вашій програмі. Він включає:
+1. **Data Models (Моделі даних):** Прості Kotlin-класи `data class` (наприклад, `User`, `TimerData`, `Product`), які описують об'єкти системи.
+2. **Repositories (Репозиторії):** Класи, які виступають "єдиним джерелом правди" (Single Source of Truth) і керують тим, звідки отримувати чи куди зберігати дані.
+3. **Data Sources (Джерела даних):**
+   * Локальні бази даних (Room, SQLite).
+   * Мережеві запити до серверів (REST API).
+   * Локальні налаштування (`SharedPreferences`, `DataStore`).
+
+**Головні властивості Model:**
+* Шар `Model` є повністю автономним і незалежним від UI (він поняття не має ні про `Activity`, ні про `ViewModel`).
+* Завдяки цій автономності шар `Model` легко тестувати юніт-тестами та перевикористовувати у різних частинах програми.
+
 **Головне правило MVVM:** 
-`View` (Activity) відповідає **тільки** за відображення UI та відмальовку даних. Вона не повинна містити бізнес-логіки та обчислень. Уся логіка та збереження стану виносяться у `ViewModel`.
+`View` (Activity) відповідає **тільки** за відображення UI та відмальовку даних. Вона не повинна містити бізнес-логіки та обчислень. Уся логіка та збереження стану виносяться у `ViewModel` та `Model`.
 
 ---
 
@@ -187,11 +206,11 @@ import androidx.lifecycle.ViewModel
 
 class TimerViewModel : ViewModel() {
 
-    // Приватне значення, яке ми можемо змінювати у ViewModel
-    private val _secondsLeft = MutableLiveData<Long>(30)
+    // Приватне значення MutableLiveData, яке ми можемо змінювати у ViewModel
+    private val _timerLiveData = MutableLiveData<Long>(30)
     
-    // Публічне значення тільки для читання, на яке підписується Activity
-    val secondsLeft: LiveData<Long> = _secondsLeft
+    // Публічне значення LiveData тільки для читання, на яке підписується Activity
+    val timerLiveData: LiveData<Long> = _timerLiveData
 
     private var countDownTimer: CountDownTimer? = null
 
@@ -202,11 +221,11 @@ class TimerViewModel : ViewModel() {
         countDownTimer = object : CountDownTimer(30000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 // Змінюємо значення LiveData
-                _secondsLeft.value = millisUntilFinished / 1000
+                _timerLiveData.value = millisUntilFinished / 1000
             }
 
             override fun onFinish() {
-                _secondsLeft.value = 0
+                _timerLiveData.value = 0
             }
         }.start()
     }
@@ -238,7 +257,7 @@ class MainActivity : AppCompatActivity() {
 
         // ПІДПИСКА на зміни LiveData
         // Передаємо 'this' (LifecycleOwner), щоб LiveData автоматично стежила за станом екрану
-        viewModel.secondsLeft.observe(this) { seconds ->
+        viewModel.timerLiveData.observe(this) { seconds ->
             binding.tvTimer.text = "Залишилось: $seconds сек"
         }
     }
