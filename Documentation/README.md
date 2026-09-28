@@ -22,3 +22,6 @@
 
 ## 05. Архітектура MVVM та Jetpack ViewModel
 * [MVVM, ViewModel та LiveData (`01_ViewModel_and_MVVM.md`)](05_ViewModel_MVVM/01_ViewModel_and_MVVM.md) — розбір проблем із втратою стану при повороті екрану та витоками пам'яті, знайомство з MVVM, життєвим циклом `ViewModel`, `LiveData`, інкапсуляцією та різницею між `setValue()` і `postValue()`.
+
+## 06. Багатопоточність (Concurrency)
+* [Threads, Looper та Handler (`01_Threads_Looper_Handler.md`)](06_Concurrency/01_Threads_Looper_Handler.md) — основи багатопотоковості в Android, правила Main Thread, помилка `CalledFromWrongThreadException`, механіка `MessageQueue`, `Looper` та `Handler`, відкладене виконання через `postDelayed()`.
