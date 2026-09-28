@@ -7,7 +7,7 @@
 ## 1. Початковий проект та Правило Головного Потоку (Main/UI Thread)
 
 > 📦 **Початковий проект:**
-> Ви можете завантажити або склонувати заготовку цього проекту з GitHub за посиланням: [krenevych/Concurrency](https://github.com/krenevych/Concurrency).
+> Ви можете завантажити або склонувати заготовку цього проекту з GitHub за посиланням: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`threadshandler`**).
 
 ### Головний потік (Main Thread / UI Thread)
 Коли Android-застосунок запускається, система створює один основний потік виконання — **Main Thread** (або UI Thread).
@@ -205,6 +205,9 @@ thread {
     }
 }
 ```
+
+> 💡 **Готовий розв'язок:**
+> Повний робочий код із використання `Handler` та колбеків можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`solution`** (модуль **`threadshandler`**).
 
 ---
 
