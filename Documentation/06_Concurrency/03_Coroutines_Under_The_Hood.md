@@ -46,45 +46,56 @@ interface Continuation<in T> {
 ### Схематичний принцип роботи Машини Станів:
 
 ```kotlin
-// Ваша suspend функція:
+// 1. Код, який пишете ви на Kotlin:
 suspend fun loadData() {
-    val city = loadCity()                   // Точка призупинення 1 (label = 0 -> 1)
-    val temp = loadTemperature(city)        // Точка призупинення 2 (label = 1 -> 2)
-    updateUI(city, temp)                    // Завершення (label = 2)
+    val city = loadCity()            // Точка призупинення 1 (label: 0 -> 1)
+    val temp = loadTemperature(city) // Точка призупинення 2 (label: 1 -> 2)
+    updateUI(city, temp)             // Завершення (label = 2)
 }
 ```
 
-**Сгенерована компілятором Машина станів (спрощено):**
+**Сгенерована компілятором Машина станів (спрощена схема в байткоді):**
 ```kotlin
-fun loadData(completion: Continuation<Unit>) {
+fun loadData(completion: Continuation<Any?>): Any? {
+    // Створюємо або отримуємо існуючий об'єкт Машини станів (Continuation)
     val sm = completion as? LoadDataContinuation ?: object : ContinuationImpl(completion) {
         var label = 0
+        var result: Any? = null
         var city: String? = null
-        var temp: String? = null
+
+        // Цей метод викликається автоматично при відновленні корутини (resumeWith)
+        override fun invokeSuspend(result: Result<Any?>): Any? {
+            this.result = result
+            return loadData(this) // РЕКУРСИВНИЙ ВХІД у loadData з оновленим label!
+        }
     }
 
     when (sm.label) {
         0 -> {
             sm.label = 1
-            loadCity(sm) // Передаємо машину станів як Continuation
-            return       // Призупиняємо виконання та звільняємо потік!
+            return loadCity(sm) // Запускаємо loadCity та передаємо sm як Continuation
         }
         1 -> {
-            sm.city = result as String
+            // Корутина відновилася з результатом loadCity()
+            sm.city = sm.result as String
             sm.label = 2
-            loadTemperature(sm.city!!, sm)
-            return       // Знову призупиняємо виконання
+            return loadTemperature(sm.city!!, sm) // Запускаємо loadTemperature
         }
         2 -> {
-            sm.temp = result as String
-            updateUI(sm.city!!, sm.temp!!)
-            return       // Роботу завершено
+            // Корутина відновилася з результатом loadTemperature()
+            val temp = sm.result as String
+            updateUI(sm.city!!, temp)
+            return Unit // Роботу повністю завершено!
         }
+        else -> error("Invalid state")
     }
 }
 ```
 
-Завдяки цьому `suspend` функція не блокує потік: вона просто зберігає свій поточний стан у `label` та локальні змінні в об'єкті `Continuation`, повертає керування потоку, а при отриманні результату викликає `resume` і повертається у блок `when (label)` на наступний крок!
+Завдяки цьому `suspend` функція не блокує потік:
+1. Під час виклику `loadCity(sm)` вона зберігає `sm.label = 1` та повертає прапорець `COROUTINE_SUSPENDED`, миттєво звільняючи потік.
+2. Коли асинхронне завантаження `loadCity()` завершується, воно викликає `sm.resumeWith(result)`, який всередині викликає `invokeSuspend()`.
+3. `invokeSuspend()` повторно викликає `loadData(sm)` — заходить у підрозділ `when (sm.label == 1)` і продовжує виконання з наступного рядка!
 
 ---
 
@@ -147,29 +158,6 @@ lifecycleScope.launch {
 
 ---
 
-## 5. Кооперативне скасування (Cooperative Cancellation)
-
-Скасування корутини в Kotlin є **кооперативним**. Це означає, що корутина не може бути скасована "примусово" чи насильно вбита посеред виконання арифметичного циклу.
-
-Корутина повинна **сам перевіряти**, чи її не скасували!
-
-### Як перевіряється скасування?
-1. **Усі стандартні `suspend` функції** бібліотеки Kotlin (`delay()`, `withContext()`, `await()`) **автоматично перевіряють скасування** перед виконанням і викидають спеціальний виняток `CancellationException`, якщо корутину було скасовано.
-2. Якщо ви виконуєте тривалий обчислювальний цикл без виклику `suspend` функцій, ви повинні вручну перевіряти прапорець **`isActive`** або викликати **`ensureActive()`** / **`yield()`**:
-
-```kotlin
-lifecycleScope.launch(Dispatchers.Default) {
-    for (i in 1..1000000) {
-        // Перевіряємо, чи корутина все ще активна
-        ensureActive() // Перериває цикл, якщо корутину скасовано
-        
-        // Складні обчислення...
-    }
-}
-```
-
----
-
 > 💡 **Готовий розв'язок:**
 > Повний робочий код прикладів з корутинами можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutines_under_the_hood`** (модуль **`coroutine`**).
 
@@ -177,8 +165,8 @@ lifecycleScope.launch(Dispatchers.Default) {
 
 ## Підсумок
 
-* **CPS (Continuation-Passing Style)** — компілятор додає параметр `Continuation<T>` у кожну `suspend` функцію.
+* **CPS (Continuation-Passing Style)** — компілятор додає прихований параметр `Continuation<T>` у кожну `suspend` функцію.
 * **Continuation** — об'єкт-колбек, який зберігає точку відновлення та локальні змінні корутини.
 * **State Machine** — компілятор розбиває `suspend` функцію на мітки (`label`) і перемикає їх при відновленні виконання.
+* **`suspendCoroutine`** — дозволяє зручно обгортати застарілі функції з асинхронними колбеками у `suspend` функції.
 * **Легковажність** — корутини це об'єкти в RAM, тому мільйони корутин можуть працювати на жменьці системних потоків.
-* **Кооперативне скасування** — корутини перевіряють стан через `isActive` / `ensureActive()` і скасовуються шляхом викидання `CancellationException`.
