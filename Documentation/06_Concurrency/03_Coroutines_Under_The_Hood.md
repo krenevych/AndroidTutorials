@@ -43,63 +43,102 @@ interface Continuation<in T> {
 
 Усі точки призупинення (`suspendPoints` — виклики інших `suspend` функцій) розбиваються на мітки (`label = 0, 1, 2...`), а всі локальні змінні зберігаються у полях об'єкта `Continuation`.
 
-### Схематичний принцип роботи Машини Станів:
+### Наочна реалізація Машини Станів у коді
+
+Давайте подивимося, як концептуально влаштована Машина станів та клас `Continuation` на реальному прикладі з проекту:
+
+#### 1. Клас `LoadDataContinuation` (Збереження стану)
+Створюється спеціалізований клас, який реалізує `Continuation<Unit>`, зберігає номер поточного кроку (`label`) та поля результатів між запускними етапами:
 
 ```kotlin
-// 1. Код, який пишете ви на Kotlin:
-suspend fun loadData() {
-    val city = loadCity()            // Точка призупинення 1 (label: 0 -> 1)
-    val temp = loadTemperature(city) // Точка призупинення 2 (label: 1 -> 2)
-    updateUI(city, temp)             // Завершення (label = 2)
+class LoadDataContinuation(
+    private val activity: MainActivity,
+    override val context: CoroutineContext = EmptyCoroutineContext
+) : Continuation<Unit> {
+
+    // Поточний стан стейт-машини
+    var label: Int = 0
+
+    // Поля для збереження результатів між кроками
+    var city: String = ""
+    var temperature: Int = 0
+
+    override fun resumeWith(result: Result<Unit>) {
+        if (result.isFailure) return
+        
+        // При кожному відновленні викликаємо метод стейт-машини
+        activity.loadData(this)
+    }
 }
 ```
 
-**Сгенерована компілятором Машина станів (спрощена схема в байткоді):**
+#### 2. Функція `loadData` (Стейт-машина)
+Залежно від значення `label`, виконується відповідний крок асинхронного ланцюжка:
+
 ```kotlin
-fun loadData(completion: Continuation<Any?>): Any? {
-    // Створюємо або отримуємо існуючий об'єкт Машини станів (Continuation)
-    val sm = completion as? LoadDataContinuation ?: object : ContinuationImpl(completion) {
-        var label = 0
-        var result: Any? = null
-        var city: String? = null
-
-        // Цей метод викликається автоматично при відновленні корутини (resumeWith)
-        override fun invokeSuspend(result: Result<Any?>): Any? {
-            this.result = result
-            return loadData(this) // РЕКУРСИВНИЙ ВХІД у loadData з оновленим label!
-        }
-    }
-
-    when (sm.label) {
+fun loadData(completion: LoadDataContinuation) {
+    when (completion.label) {
         0 -> {
-            sm.label = 1
-            return loadCity(sm) // Запускаємо loadCity та передаємо sm як Continuation
+            // КРОК 0: Початок — готуємо UI, переводимо label в 1
+            completion.label = 1
+
+            binding.btnLoadData.isEnabled = false
+            binding.progressBar.visibility = View.VISIBLE
+            binding.tvCityValue.text = ""
+            binding.tvTemperatureValue.text = ""
+
+            // Запускаємо фонову задачу завантаження міста
+            thread {
+                loadCity(completion)
+            }
         }
+
         1 -> {
-            // Корутина відновилася з результатом loadCity()
-            sm.city = sm.result as String
-            sm.label = 2
-            return loadTemperature(sm.city!!, sm) // Запускаємо loadTemperature
+            // КРОК 1: Відновлення — місто вже збережено в completion.city
+            binding.tvCityValue.text = completion.city
+            completion.label = 2
+
+            // Запускаємо фонову задачу завантаження температури
+            thread {
+                loadTemperature(completion)
+            }
         }
+
         2 -> {
-            // Корутина відновилася з результатом loadTemperature()
-            val temp = sm.result as String
-            updateUI(sm.city!!, temp)
-            return Unit // Роботу повністю завершено!
+            // КРОК 2: Відновлення — температура збережена в completion.temperature
+            binding.tvTemperatureValue.text = completion.temperature.toString()
+            binding.progressBar.visibility = View.GONE
+            binding.btnLoadData.isEnabled = true
         }
-        else -> error("Invalid state")
     }
 }
 ```
 
-Завдяки цьому `suspend` функція не блокує потік:
-1. Під час виклику `loadCity(sm)` вона зберігає `sm.label = 1` та повертає прапорець `COROUTINE_SUSPENDED`, миттєво звільняючи потік.
-2. Коли асинхронне завантаження `loadCity()` завершується, воно викликає `sm.resumeWith(result)`, який всередині викликає `invokeSuspend()`.
-3. `invokeSuspend()` повторно викликає `loadData(sm)` — заходить у підрозділ `when (sm.label == 1)` і продовжує виконання з наступного рядка!
+#### 3. Асинхронні кроки-функції
+Після завершення фонової роботи функція записує результат безпосередньо у поновлюваний `completion` і викликає `resumeWith()`:
+
+```kotlin
+private fun loadCity(continuation: LoadDataContinuation) {
+    Thread.sleep(3_000) // Імітація тривалої роботи у фоні
+
+    runOnUiThread {
+        continuation.city = "Kyiv" // Записуємо результат у поле
+        continuation.resumeWith(Result.success(Unit)) // Відновлюємо стейт-машину
+    }
+}
+```
+
+### У чому головна суть цієї схеми?
+1. Замість того, щоб чекати на відповідь і заблокувати потік (`Thread.sleep`), функція запускає фонову задачу, передаючи їй об'єкт `Continuation`, і **миттєво завершує поточний виклик**, звільняючи Main Thread.
+2. Головний потік програми залишається повністю вільним для малювання UI, реакцій на кліки та анімації ProgressBar.
+3. Коли фонова задача завершується, вона викликає метод `continuation.resumeWith()`, і Машина станів переходить на наступний крок (`label`), оновлюючи екран та продовжуючи роботу з місця паузи.
+
+> 💡 **Готовий розв'язок:**
+> Повний робочий код прикладів з корутинами можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutines_under_the_hood`** (модуль **`coroutine`**).
 
 ---
 
-## 3. Перетворення колбеків у `suspend` функції (`suspendCoroutine`)
+## 3. Перетворення функцій з колбеками у `suspend` функції (`suspendCoroutine`)
 
 У реальних проектах вам часто доводиться працювати із застарілим або стороннім кодом (Legacy Code), який працює на асинхронних колбеках (Callback).
 
@@ -155,11 +194,6 @@ lifecycleScope.launch {
 
 * **Системний `Thread` в ОС:** Це важкий об'єкт операційної системи Linux/Android. Для кожного `Thread` виділяється близько 1 МБ стек-пам'яті в RAM, а переключення між потоками (Context Switch) вимагає переривань на рівні ядра процесора. Створення 100 000 системних потоків миттєво вб'є застосунок з `OutOfMemoryError`.
 * **Корутина:** Це **звичайний об'єкт Kotlin в оперативній пам'яті** (екземпляр Машини станів `ContinuationImpl`). Вона займає усього кілька сотень байт. 100 000 корутин можуть спокійно виконуватися на невеличкому пулі з 4-8 справжніх системних потоків!
-
----
-
-> 💡 **Готовий розв'язок:**
-> Повний робочий код прикладів з корутинами можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutines_under_the_hood`** (модуль **`coroutine`**).
 
 ---
 

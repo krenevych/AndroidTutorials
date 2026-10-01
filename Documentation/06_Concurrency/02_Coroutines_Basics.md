@@ -7,7 +7,7 @@
 ## 1. Початковий проект та концепція "Синхронного стилю"
 
 > 📦 **Початковий проект:**
-> Ви можете завантажити або склонувати заготовку цього проекту з GitHub за посиланням: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`coroutine`**).
+> Ви можете завантажити або склонувати заготовку цього проекту з GitHub за посиланням: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`coroutine_start`**, модуль **`coroutine`**).
 
 ### Що таке асинхронність у синхронному стилі?
 У минулому уроці ми бачили, що при роботі з колбеками код перетворюється на "Callback Hell" (вкладену локшину коду).
@@ -191,7 +191,7 @@ lifecycleScope.launch(Dispatchers.Main) { // 1. Починаємо на Main Thr
 ---
 
 > 💡 **Готовий розв'язок:**
-> Повний робочий код із цього уроку можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`solution`** (модуль **`coroutine`**).
+> Повний робочий код із цього уроку можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutine_end`** (модуль **`coroutine`**).
 
 ---
 
