@@ -207,7 +207,7 @@ thread {
 ```
 
 > 💡 **Готовий розв'язок:**
-> Повний робочий код із використання `Handler` та колбеків можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`solution`** (модуль **`multithreading`**).
+> Повний робочий код із використання `Handler` та колбеків можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`multithread_solution`** (модуль **`multithreading`**).
 
 ---
 
