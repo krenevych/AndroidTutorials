@@ -172,13 +172,13 @@ lifecycleScope.launch(Dispatchers.Main) {
 * **`awaitAll(...)`** — чекає на завершення **усіх** переданих `Deferred<T>` корутин і повертає список їхніх результатів `List<T>`.
   ```kotlin
   lifecycleScope.launch(Dispatchers.Main) {
-      // Запускаємо список із кількох паралельних задач
-      val deferreds: List<Deferred<Int>> = (1..5).map { id ->
-          async(Dispatchers.IO) { fetchPriceForProduct(id) }
-      }
+      // 1. Запускаємо 3 фонові задачі ПАРАЛЕЛЬНО
+      val task1 = async(Dispatchers.IO) { fetchPriceForProduct(1) }
+      val task2 = async(Dispatchers.IO) { fetchPriceForProduct(2) }
+      val task3 = async(Dispatchers.IO) { fetchPriceForProduct(3) }
 
-      // Чекаємо завершення УСІХ задач і отримуємо список результатів List<Int>
-      val prices: List<Int> = deferreds.awaitAll()
+      // 2. Чекаємо завершення УСІХ задач і отримуємо список результатів List<Int>
+      val prices: List<Int> = awaitAll(task1, task2, task3)
   }
   ```
 
