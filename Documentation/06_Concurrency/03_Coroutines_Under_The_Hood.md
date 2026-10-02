@@ -2,6 +2,10 @@
 
 У попередніх уроках ми навчилися використовувати корутини у коді. Тепер розберемося, як компілятор Kotlin та JVM реалізують цю "магію" під капотом без створення важких системних потоків.
 
+> 📦 **Початковий проект:**
+> Ви можете завантажити або склонувати заготовку цього проекту з GitHub за посиланням: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`coroutine_under_the_hood_start`**, модуль **`coroutine`**).
+
+
 ---
 
 ## 1. CPS (Continuation-Passing Style) та прихований параметр
@@ -134,7 +138,7 @@ private fun loadCity(continuation: LoadDataContinuation) {
 3. Коли фонова задача завершується, вона викликає метод `continuation.resumeWith()`, і Машина станів переходить на наступний крок (`label`), оновлюючи екран та продовжуючи роботу з місця паузи.
 
 > 💡 **Готовий розв'язок:**
-> Повний робочий код прикладів з корутинами можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutines_under_the_hood`** (модуль **`coroutine`**).
+> Повний робочий код прикладів з корутинами можна переглянути в репозиторії [krenevych/Concurrency](https://github.com/krenevych/Concurrency) на гілці **`coroutine_under_the_hood_end`** (модуль **`coroutine`**).
 
 ---
 
