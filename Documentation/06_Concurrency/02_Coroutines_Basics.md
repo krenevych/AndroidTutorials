@@ -165,6 +165,32 @@ lifecycleScope.launch(Dispatchers.Main) {
 }
 ```
 
+#### Очікування масивів задач: `awaitAll()` та `joinAll()`
+
+Коли ви запускаєте багато паралельних корутин (наприклад, обробку списку файлів чи запити для кількох елементів), чекати на кожну окремо через `.await()` чи `.join()` незручно. Для цього в Kotlin є згруповані функції:
+
+* **`awaitAll(...)`** — чекає на завершення **усіх** переданих `Deferred<T>` корутин і повертає список їхніх результатів `List<T>`.
+  ```kotlin
+  lifecycleScope.launch(Dispatchers.Main) {
+      // Запускаємо список із кількох паралельних задач
+      val deferreds: List<Deferred<Int>> = (1..5).map { id ->
+          async(Dispatchers.IO) { fetchPriceForProduct(id) }
+      }
+
+      // Чекаємо завершення УСІХ задач і отримуємо список результатів List<Int>
+      val prices: List<Int> = deferreds.awaitAll()
+  }
+  ```
+
+* **`joinAll(...)`** — чекає на завершення **усіх** переданих `Job` корутин (від `launch`), не повертаючи значень.
+  ```kotlin
+  val job1 = launch { downloadPart1() }
+  val job2 = launch { downloadPart2() }
+
+  // Дочікуємося завершення обох завантажень
+  joinAll(job1, job2)
+  ```
+
 > 💡 **Різниця між `join()` та `await()`:**
 > * `job.join()` (для `launch`) — просто **чекає завершення** роботи корутини, не повертаючи жодного значення.
 > * `deferred.await()` (для `async`) — **чекає та повертає** обчислене значення назад.
