@@ -27,5 +27,5 @@
 * [Threads, Looper та Handler (`01_Threads_Looper_Handler.md`)](06_Concurrency/01_Threads_Looper_Handler.md) — основи багатопотоковості в Android, правила Main Thread, помилка `CalledFromWrongThreadException`, механіка `MessageQueue`, `Looper` та `Handler`, відкладене виконання через `postDelayed()`.
 * [Вступ до Kotlin Coroutines (`02_Coroutines_Basics.md`)](06_Concurrency/02_Coroutines_Basics.md) — асинхронність у синхронному стилі, `suspend` функції, диспатчери (`Dispatchers.Main`, `Dispatchers.IO`, `Dispatchers.Default`), білдери корутин (`launch`, `async`/`await`, `withContext`).
 * [Корутини під капотом (`03_Coroutines_Under_The_Hood.md`)](06_Concurrency/03_Coroutines_Under_The_Hood.md) — механізм CPS, прихований параметр `Continuation`, Машина станів (State Machine), легковажність корутин та кооперативне скасування.
-* [Обробка помилок та Скасування (`04_Coroutines_Error_Handling.md`)](06_Concurrency/04_Coroutines_Error_Handling.md) — `try-catch`, підступність `CancellationException`, `SupervisorJob` та `supervisorScope`, глобальний `CoroutineExceptionHandler`.
+* [Скасування та Обробка помилок у Корутинах (`04_Coroutines_Error_Handling.md`)](06_Concurrency/04_Coroutines_Error_Handling.md) — `try-catch`, підступність `CancellationException`, `SupervisorJob` та `supervisorScope`, глобальний `CoroutineExceptionHandler`.
 
