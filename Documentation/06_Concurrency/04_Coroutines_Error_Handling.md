@@ -147,6 +147,37 @@ lifecycleScope.launch(Dispatchers.Main) {
 
 ---
 
+### Скасування усередині кастомних `suspend` функцій
+
+Коли ви розробляєте власні класи (наприклад, `Repository` чи `DataProcessor`) і створюєте кастомні `suspend` функції, вони **також повинні бути кооперативними до скасування**.
+
+* **Якщо ваша `suspend` функція викликає інші `suspend` функції** (такі як `delay()`, `withContext()`, мережеві запити Retrofit чи завантаження з бази даних Room) — вона **автоматично є кооперативною до скасування**. Ці вбудовані функції самі перевіряють статус `Job` і викидають `CancellationException`. Жодних додаткових дій писати не потрібно!
+* **АЛЕ якщо ваша кастомна `suspend` функція виконує обчислювальний цикл** або обробку масиву у пам'яті без виклику інших `suspend` функцій, вам потрібно перевіряти скасування вручну через властивість **`coroutineContext.ensureActive()`**:
+
+```kotlin
+class DataRepository {
+
+    // Кастомна suspend функція
+    suspend fun processItems(items: List<Item>): List<Result> {
+        val results = mutableListOf<Result>()
+
+        for (item in items) {
+            // ⚡ Перевіряємо скасування усередині кастомного обчислювального циклу
+            coroutineContext.ensureActive()
+
+            val processed = heavyProcess(item)
+            results.add(processed)
+        }
+
+        return results
+    }
+}
+```
+
+Завдяки виклику `coroutineContext.ensureActive()`, якщо корутину у `ViewModel` чи `Activity` було скасовано, ваша кастомна `suspend` функція `processItems` миттєво зупинить обробку списку і викине `CancellationException`.
+
+---
+
 ### 🛡️ Гарантоване очищення ресурсів: `NonCancellable`
 
 Коли корутину скасовано, будь-який наступний виклик `suspend` функції всередині неї відразу викидає `CancellationException`. 
