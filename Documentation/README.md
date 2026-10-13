@@ -30,3 +30,6 @@
 * [Скасування та Обробка помилок у Корутинах (`04_Coroutines_Error_Handling.md`)](06_Concurrency/04_Coroutines_Error_Handling.md) — кооперативне скасування (`isActive`, `ensureActive()`, `yield()`), `try-catch`, прокидання `CancellationException`, `SupervisorJob` та `supervisorScope`, `CoroutineExceptionHandler`.
 * [Холодні реактивні потоки: Kotlin Flow (`05_Kotlin_Flow.md`)](06_Concurrency/05_Kotlin_Flow.md) — створення потоків через `flow { emit(...) }`, споживання через `collect`, популярні оператори (`map`, `filter`, `debounce`, `catch`, `flowOn`), збереження контексту.
 * [Гарячі реактивні потоки: StateFlow та SharedFlow (`06_StateFlow_and_SharedFlow.md`)](06_Concurrency/06_StateFlow_and_SharedFlow.md) — гарячі потоки для збереження стану екрану, `StateFlow` як заміна `LiveData`, інкапсуляція у ViewModel, оператор `stateIn(WhileSubscribed(5000))`, сумісність з Compose та `repeatOnLifecycle`.
+
+## 07. Jetpack Compose
+* [Вступ до Jetpack Compose (`01_Compose_Basics.md`)](07_Compose/01_Compose_Basics.md) — декларативний UI, формулювання $\text{UI} = f(\text{State})$, анотація `@Composable`, макети (`Column`, `Row`, `Box`), ланцюжки модифікаторів `Modifier`, базові елементи (`Text`, `Button`, `Image`) та прев'ю `@Preview`.
