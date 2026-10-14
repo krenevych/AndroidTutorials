@@ -84,8 +84,6 @@ lifecycleScope.launch {
 | **`distinctUntilChanged()`** | Пропускає елемент лише якщо він **відрізняється від попереднього** значення. | `.distinctUntilChanged()` |
 | **`debounce(time)`** | Пропускає значення тільки якщо після нього минув вказаний час без нових викликів (для пошукового рядка). | `.debounce(400)` |
 | **`take(n)`** | Обмежує потік першими `n` елементами та автоматично завершує його. | `.take(5)` |
-| **`launchIn(scope)`** | Термінальний оператор, що запускає збирання Flow у вказаному `CoroutineScope` (скорочення замість `scope.launch { flow.collect() }`). | `.onEach { ... }.launchIn(lifecycleScope)` |
-
 
 > 💡 **Як перевіряти причину завершення в `onCompletion`?**
 >
@@ -132,18 +130,27 @@ lifecycleScope.launch {
 
 ---
 
-### Приклад короткого ланцюжка через `launchIn`:
+## 3. Альтернативний спосіб підписки: Термінальний білдер `launchIn(scope)`
 
-Замість того, щоб загортати весь код у блок `lifecycleScope.launch { flow.collect { ... } }`, ви можете використати оператор **`launchIn(scope)`** у комбінації з **`onEach`**:
+Зазвичай для підписки на `Flow` використовується конструкція `scope.launch { flow.collect { ... } }`. 
+
+Проте в Kotlin є більш лаконічний термінальний оператор **`launchIn(scope)`**. У комбінації з оператором **`onEach`** він дозволяє підписатися на потік без потреби загортати весь ланцюжок у зовнішній блок `launch`:
 
 ```kotlin
 getCounterFlow()
     .onEach { value ->
-        // Обробка кожного елемента
+        // 1. Обробляємо кожний елемент
         binding.tvCounter.text = "Лічильник: $value"
     }
-    .launchIn(lifecycleScope) // Автоматично запускає збирання Flow у цьому Scope!
+    .catch { e ->
+        Log.e(TAG, "Помилка у Flow", e)
+    }
+    .launchIn(lifecycleScope) // 2. Автоматично створює корутину і запускає collect() у вказаному Scope!
 ```
+
+**Як це працює під капотом?**
+Виклик `flow.onEach { ... }.launchIn(scope)` є абсолютно еквівалентним запису:
+`scope.launch { flow.onEach { ... }.collect() }`
 
 
 
