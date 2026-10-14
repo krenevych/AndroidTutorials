@@ -152,8 +152,42 @@ getCounterFlow()
 Виклик `flow.onEach { ... }.launchIn(scope)` є абсолютно еквівалентним запису:
 `scope.launch { flow.onEach { ... }.collect() }`
 
+---
 
+## 4. Конвертація Flow у LiveData через `asLiveData()`
 
+Якщо ваш проект розробляється з використанням традиційного підходу на XML-верстці та `LiveData`, ви можете легко перетворити будь-який холодний `Flow` (наприклад, із баз даних Room чи репозиторіїв) у `LiveData` за допомогою розширювального методу **`asLiveData()`**.
+
+### Необхідна залежність
+Для роботи `.asLiveData()` у файлі `build.gradle.kts` повинна бути підключена бібліотека KTX:
+```kotlin
+implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.0")
+```
+Та доданий імпорт у Kotlin-файлі:
+```kotlin
+import androidx.lifecycle.asLiveData
+```
+
+### Приклад використання у ViewModel:
+
+```kotlin
+class CounterViewModel : ViewModel() {
+
+    // Конвертуємо холодний getCounterFlow() у LiveData для підписки у ViewBinding
+    val counterLiveData: LiveData<Int> = getCounterFlow().asLiveData()
+
+    private fun getCounterFlow(): Flow<Int> = flow {
+        for (i in 1..5) {
+            delay(1000)
+            emit(i)
+        }
+    }
+}
+```
+
+### Як `asLiveData()` працює під капотом?
+1. **Запуск тільки при активній підписці:** Поки `Activity` не підписалася на `userListLiveData`, холодний `Flow` мовчить і не робить даремних запитів.
+2. **Автоматична пауза з 5-секундним таймаутом:** Коли екран згортається у фон (`onStop`), `.asLiveData()` чекає паузу в **5 секунд (5000 мс)**. Якщо за 5 секунд екран не відновився (тобто це був не поворот пристрою, а вихід із додатка), підписка на `Flow` автоматично скасовується. При повороті екрану нова `Activity` перепідключається миттєво без перезапуску запиту!
 
 ---
 
