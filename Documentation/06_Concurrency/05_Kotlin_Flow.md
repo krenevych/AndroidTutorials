@@ -86,30 +86,6 @@ lifecycleScope.launch {
 | **`take(n)`** | Обмежує потік першими `n` елементами та автоматично завершує його. | `.take(5)` |
 | **`launchIn(scope)`** | Термінальний оператор, що запускає збирання Flow у вказаному `CoroutineScope` (скорочення замість `scope.launch { flow.collect() }`). | `.onEach { ... }.launchIn(lifecycleScope)` |
 
----
-
-### Приклад об'єднання операторів у ланцюжок:
-
-```kotlin
-lifecycleScope.launch {
-    getCounterFlow()
-        .filter { it % 2 == 0 }                 // 1. Фільтруємо лише парні числа
-        .map { "Парне число: $it" }             // 2. Перетворюємо число у рядок
-        .onEach { Log.d(TAG, "Отримано: $it") }  // 3. Логуємо кожен крок
-        .catch { e -> Log.e(TAG, "Помилка у Flow", e) } // 4. Безпечно перехоплюємо помилки
-        .onCompletion { cause ->               // 5. Виконується при завершенні або скасуванні
-            if (cause == null) {
-                Log.d(TAG, "Потік успішно завершився сам!")
-            } else {
-                Log.d(TAG, "Потік зупинено через скасування або помилку: $cause")
-            }
-        }
-        .flowOn(Dispatchers.IO)                // 6. Виконуємо обчислення вище у фоновому потоці!
-        .collect { result ->                   // 7. Отримуємо фінальний результат у Main Thread
-            binding.tvResult.text = result
-        }
-}
-```
 
 > 💡 **Як перевіряти причину завершення в `onCompletion`?**
 >
@@ -125,8 +101,52 @@ lifecycleScope.launch {
    Якщо ви викликаєте `.collect()` усередині `lifecycleScope.launch` (на `Dispatchers.Main`), то і код усередині `flow { ... }`, і збір даних `.collect()` виконуються **на Головному потоці (Main Thread)**.
 
 2. **Куди приходить результат у `.collect { ... }`?**
-   Результат у блоці `.collect { result -> ... }` **ЗАВЖДИ приходить у той потік, де була запущена корутина підписки** (Main Thread). 
+   Результат у блоці `.collect { result -> ... }` **ЗАВЖДИ приходить у той потік, де була запущена корутина підписки** (Main Thread).
    Навіть якщо за допомогою `.flowOn(Dispatchers.IO)` ви перенесли важку фонову роботу у потік `IO`, блок `.collect { ... }` все одно виконається на Головному потоці, що робить оновлення UI усередині `collect` абсолютно безпечним!
+
+---
+
+### Приклад об'єднання операторів у ланцюжок:
+
+```kotlin
+lifecycleScope.launch {
+    getCounterFlow()
+        .onStart { Log.d(TAG, "Запуск емісії Flow!") } // 1. Спрацьовує перед початком
+        .filter { it % 2 == 0 }                         // 2. Фільтруємо лише парні числа
+        .map { "Парне число: $it" }                     // 3. Перетворюємо число у рядок
+        .onEach { Log.d(TAG, "Отримано: $it") }          // 4. Логуємо кожен крок
+        .catch { e -> Log.e(TAG, "Помилка у Flow", e) } // 5. Безпечно перехоплюємо помилки
+        .onCompletion { cause ->                       // 6. Виконується при завершенні або скасуванні
+            if (cause == null) {
+                Log.d(TAG, "Потік успішно завершився сам!")
+            } else {
+                Log.d(TAG, "Потік зупинено через скасування або помилку: $cause")
+            }
+        }
+        .flowOn(Dispatchers.IO)                        // 7. Виконуємо обчислення вище у фоновому потоці!
+        .collect { result ->                           // 8. Отримуємо фінальний результат у Main Thread
+            binding.tvResult.text = result
+        }
+}
+```
+
+---
+
+### Приклад короткого ланцюжка через `launchIn`:
+
+Замість того, щоб загортати весь код у блок `lifecycleScope.launch { flow.collect { ... } }`, ви можете використати оператор **`launchIn(scope)`** у комбінації з **`onEach`**:
+
+```kotlin
+getCounterFlow()
+    .onEach { value ->
+        // Обробка кожного елемента
+        binding.tvCounter.text = "Лічильник: $value"
+    }
+    .launchIn(lifecycleScope) // Автоматично запускає збирання Flow у цьому Scope!
+```
+
+
+
 
 ---
 
