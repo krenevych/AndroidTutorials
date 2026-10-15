@@ -446,6 +446,30 @@ val myGreen = Color(0xFF4CAF50)
 val semiTransparentRed = Color(0x80FF0000)
 ```
 
+#### C. Семантичні кольори теми (`MaterialTheme.colorScheme`) та автоконтраст `Surface`
+
+У реальних Android-проектах кольори рідко кодують жорстко через `Color(0xFF...)`. Замість цього використовують **семантичну палітру теми Material Design 3** — `MaterialTheme.colorScheme`:
+
+* **`MaterialTheme.colorScheme.primary`** — головний фірмовий колір вашого бренду (для активних кнопок та елементів).
+* **`MaterialTheme.colorScheme.onPrimary`** — контрастний колір для тексту/іконок, що лежать *поверх* primary.
+* **`MaterialTheme.colorScheme.background`** — колір фону всього екрану.
+* **`MaterialTheme.colorScheme.surface`** — колір фону карток, діалогів та меню.
+
+> 💡 **Чому це важливо?** Завдяки використанню `MaterialTheme.colorScheme`, при увімкненні **Темної теми (Dark Mode)** у системі ваш додаток **автоматично перемикає всі кольори** на їхні темні варіанти із файлу `ui.theme/Theme.kt` без жодного редагування верстки!
+
+##### Магія автоконтрасту контейнера `Surface`:
+Коли ви огортаєте елементи в контейнер `Surface(color = MaterialTheme.colorScheme.primary)`, `Surface` не лише зафарбовує фон, але й **автоматично встановлює колір усього тексту та іконок всередині себе на контрастний** (`onPrimary`):
+
+```kotlin
+// Всі елементи Text всередині Surface автоматично стануть контрастно-білими!
+Surface(color = MaterialTheme.colorScheme.primary) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Заголовок екрану") // Колір шрифту підбирається автоматично!
+        Text("Опис екрану")
+    }
+}
+```
+
 ---
 
 #### Де застосовуються кольори у компонентах:
