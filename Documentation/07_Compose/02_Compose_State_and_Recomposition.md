@@ -109,38 +109,58 @@ fun ClickCounterButton() {
 1. `value: T` — поточне значення для відображення (наприклад, `count: Int`).
 2. `onValueChange: () -> Unit` — подію-лямбду, яка сповіщає про прохання змінити значення (наприклад, `onIncrement: () -> Unit`).
 
-#### Приклад застосування State Hoisting:
+#### Трансформація нашого прикладу через State Hoisting:
+
+Перетворимо нашу кнопку `ClickCounterButton` із **Stateful** на **Stateless**, піднявши змінну стану `count` у батьківську функцію `CounterScreen`:
 
 ```kotlin
-// 1. Stateless-компонент (Чистий UI без внутрішнього стану, ідеальний для тестування)
-@Composable
-fun CounterContent(
-    count: Int,
-    onIncrement: () -> Unit
-) {
-    Button(onClick = onIncrement) {
-        Text("Натиснуто: $count разів")
-    }
-}
-
-// 2. Stateful-контейнер / Екран (Керує станом і передає його у Stateless-компонент)
+// 1. STATEFUL ЕКРАН / КОНТЕЙНЕР (Володіє станом і керує ним)
 @Composable
 fun CounterScreen() {
-    // Стан піднято у батьківську функцію!
+    // Змінну стану піднято сюди!
     var count by rememberSaveable { mutableStateOf(0) }
 
-    CounterContent(
+    // Передаємо значення та спосіб його зміни у Stateless-компонент
+    ClickCounterButton(
         count = count,
         onIncrement = { count++ }
     )
 }
+
+// 2. STATELESS КНОПКА (Чистий UI, який не містить remember усередині)
+// Вона приймає готове значення count та лямбду-обробник кліку onIncrement
+@Composable
+fun ClickCounterButton(
+    count: Int,
+    onIncrement: () -> Unit
+) {
+    Button(onClick = onIncrement) {
+        Text(text = "Натиснуто разів: $count")
+    }
+}
 ```
+
+#### Чому ця трансформація робить код набагато кращим?
+1. **Гнучкість та перевикористання:** Кнопку `ClickCounterButton` тепер можна використати для будь-якого іншого лічильника у додатку (наприклад, для к кількості товарів у кошику або оцінки товару).
+2. **Просте тестування та Прев'ю:** Ви можете миттєво переглянути у `@Preview` вигляд кнопки з будь-яким статичним числом (наприклад, `ClickCounterButton(count = 99, onIncrement = {})`), взагалі не створюючи реального екрану.
 
 ---
 
 ## 4. Практичний приклад: Розгортається Картка (Expandable Card)
 
-Побудуємо інтерактивний елемент інтерфейсу — картку, яка розгортається/згортається при натисканні на кнопку "Show More / Show Less":
+Побудуємо інтерактивний елемент інтерфейсу — картку, яка розгортається/згортається при натисканні на кнопку "Show More / Show Less".
+
+> 🛠️ **Підготовка (Бібліотека іконок та імпорти):**
+> Для використання іконок стрілок `ExpandLess` та `ExpandMore` додайте у `build.gradle.kts` залежність:
+> ```kotlin
+> implementation("androidx.compose.material:material-icons-extended")
+> ```
+> Та імпорти у ваш Kotlin-файл:
+> ```kotlin
+> import androidx.compose.material.icons.Icons
+> import androidx.compose.material.icons.filled.ExpandLess
+> import androidx.compose.material.icons.filled.ExpandMore
+> ```
 
 ```kotlin
 @Composable

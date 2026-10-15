@@ -34,3 +34,4 @@
 ## 07. Jetpack Compose
 * [Вступ до Jetpack Compose (`01_Compose_Basics.md`)](07_Compose/01_Compose_Basics.md) — декларативний UI, формулювання $\text{UI} = f(\text{State})$, анотація `@Composable`, макети (`Column`, `Row`, `Box`), ланцюжки модифікаторів `Modifier`, базові елементи (`Text`, `Button`, `Image`) та прев'ю `@Preview`.
 * [Управління станом та Recomposition (`02_Compose_State_and_Recomposition.md`)](07_Compose/02_Compose_State_and_Recomposition.md) — поняття стану, рекомпозиція, `mutableStateOf`, `remember`, `rememberSaveable` (збереження стану при повороті), підйом стану (State Hoisting) та приклад Expandable Card.
+* [Списки у Compose: LazyColumn та LazyRow (`03_Lazy_Lists.md`)](07_Compose/03_Lazy_Lists.md) — сучасна заміна `RecyclerView`, ледача генерація видимих елементів, синтаксис `items()` та `item()`, відступи через `contentPadding` та `spacedBy()`, ключ оптимізації `key`.
