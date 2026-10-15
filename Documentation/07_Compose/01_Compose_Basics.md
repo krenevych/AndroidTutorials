@@ -218,30 +218,89 @@ fun GreetingPreview() {
 └────────────────┘                                       └─┴─┴───────┴─┴─┘
 ```
 
-### 1. `Column` (Вертикальне розміщення)
-Розміщує свої дочірні елементи один під одним зверху вниз:
+### 1. `Column` (Вертикальний контейнер)
+Розміщує свої дочірні елементи один під одним зверху вниз.
+
+**Ключові параметри керування `Column`:**
+* **`verticalArrangement`** — відповідає за вертикальний розподіл дочірніх елементів уздовж головної осі (згори донизу):
+  * `Arrangement.Top` (за замовчуванням — притиснути догори).
+  * `Arrangement.Center` (по центру вертикалі).
+  * `Arrangement.Bottom` (притиснути донизу).
+  * `Arrangement.SpaceBetween` / `SpaceAround` / `SpaceEvenly` (пропорційно розподілити простір між елементами).
+  * `Arrangement.spacedBy(8.dp)` (задати однаковий фіксований відступ 8dp між усім елементами).
+* **`horizontalAlignment`** — відповідає за горизонтальне вирівнювання елементів уздовж поперечної осі (зліва направо):
+  * `Alignment.Start` (за замовчуванням — по лівому краю).
+  * `Alignment.CenterHorizontally` (вирівняти по центру горизонталі).
+  * `Alignment.End` (по правому краю).
+
 ```kotlin
-Column {
-    Text("Перший рядок")
-    Text("Другий рядок")
+Column(
+    modifier = Modifier.fillMaxSize().padding(16.dp),
+    verticalArrangement = Arrangement.spacedBy(8.dp), // Відступ 8dp між елементами
+    horizontalAlignment = Alignment.CenterHorizontally // Відцентрувати все горизонтально
+) {
+    Text("Заголовок")
+    Text("Підзаголовок")
 }
 ```
 
-### 2. `Row` (Горизонтальне розміщення)
-Розміщує елементи поруч один з одним зліва направо:
+---
+
+### 2. `Row` (Горизонтальний контейнер)
+Розміщує елементи поруч один з одним зліва направо.
+
+**Ключові параметри керування `Row`:**
+* **`horizontalArrangement`** — відповідає за горизонтальний розподіл елементів уздовж головної осі (зліва направо):
+  * `Arrangement.Start` (за замовчуванням — притиснути ліворуч).
+  * `Arrangement.Center` (по центру).
+  * `Arrangement.End` (притиснути праворуч).
+  * `Arrangement.SpaceBetween` (розсунути елементи по краях).
+  * `Arrangement.spacedBy(12.dp)` (фіксована відстань 12dp між елементами).
+* **`verticalAlignment`** — відповідає за вертикальне вирівнювання елементів уздовж поперечної осі (згори донизу):
+  * `Alignment.Top` (по верхньому краю).
+  * `Alignment.CenterVertically` (вирівняти по центру вертикалі — найпопулярніший параметр!).
+  * `Alignment.Bottom` (по нижньому краю).
+
 ```kotlin
-Row {
-    Icon(Icons.Default.Star, contentDescription = null)
-    Text("Рейтинг: 4.9")
+Row(
+    modifier = Modifier.fillMaxWidth().padding(8.dp),
+    horizontalArrangement = Arrangement.SpaceBetween, // Розсунути елементи по краях
+    verticalAlignment = Alignment.CenterVertically     // Вирівняти текст та іконку по центру
+) {
+    Text("Рейтинг застосунку")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Star, contentDescription = null, tint = Color.Yellow)
+        Text("4.9")
+    }
 }
 ```
 
-### 3. `Box` (Накладання шарів один на одного)
-Розміщує елементи один над одним у Z-просторі (як `FrameLayout`). Ідеально для накладання іконок, бейджів чи фонових зображень:
+---
+
+### 3. `Box` (Контейнер накладання / Z-вісь)
+Розміщує елементи один над одним у Z-просторі (як `FrameLayout`). Ідеально для накладання іконок, бейджів, фонових зображень чи плаваючих кнопок.
+
+**Ключові параметри керування `Box`:**
+* **`contentAlignment`** — визначає базове вирівнювання за замовчуванням для ВСІХ елементів усередині контейнера (`Alignment.TopStart`, `Alignment.Center`, `Alignment.BottomEnd` тощо).
+* **Індивідуальний `Modifier.align(...)`** — дозволяє будь-якому конкретному дочірньому елементу перевизначити своє позиціонування всередині `Box`!
+
 ```kotlin
-Box {
+Box(
+    modifier = Modifier.size(120.dp).background(Color.LightGray),
+    contentAlignment = Alignment.Center // Базове вирівнювання по центру
+) {
+    // 1. Картинка на тлі
     Image(painter = painterResource(R.drawable.banner), contentDescription = null)
-    Text("Текст поверх картинки", modifier = Modifier.align(Alignment.BottomStart))
+    
+    // 2. Текст притиснуто до правому нижньому кутку завдяки Modifier.align()
+    Text(
+        text = "NEW",
+        color = Color.White,
+        modifier = Modifier
+            .background(Color.Red)
+            .padding(4.dp)
+            .align(Alignment.BottomEnd) // Індивідуальне вирівнювання у кутку!
+    )
 }
 ```
 
