@@ -126,6 +126,87 @@ items(
 
 ---
 
+## 5. Динамічне додавання та видалення елементів списку
+
+У застарілому `RecyclerView` для додавання чи видалення елементів доводилося викликати ручні сповіщення адаптера: `adapter.notifyItemInserted()` або `adapter.notifyItemRemoved()`.
+
+У Jetpack Compose **немає жодних адаптерів чи методів сповіщення**! Зміни у списку відбуваються суто декларативно через **Стан (State)**:
+
+1. Список елементів зберігається у списку стану (наприклад, `mutableStateListOf()` або `StateFlow<List<T>>`).
+2. Ви просто додаєте або видаляєте об'єкт зі списку даних (`list.add()` або `list.remove()`).
+3. Compose автоматично виявляє зміну стану і миттєво виконує **рекомпозицію**, оновлюючи екран!
+
+### Приклад: Список із можливістю додавання та видалення карток
+
+```kotlin
+data class TaskItem(val id: Int, val title: String, val description: String)
+
+@Composable
+fun DynamicCardList() {
+    // 1. Створюємо динамічний список стану за допомогою mutableStateListOf
+    val tasks = remember {
+        mutableStateListOf(
+            TaskItem(1, "Тема 1", "Вступ до Jetpack Compose"),
+            TaskItem(2, "Тема 2", "Управління станом та Recomposition")
+        )
+    }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Кнопка додавання нового елемента у список
+        Button(
+            onClick = {
+                val nextId = (tasks.maxOfOrNull { it.id } ?: 0) + 1
+                tasks.add(TaskItem(nextId, "Тема $nextId", "Опис нової теми $nextId"))
+            },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+        ) {
+            Text("Додати нову картку")
+        }
+
+        // LazyColumn, який автоматично відмальовує зміни у tasks
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(
+                items = tasks,
+                key = { task -> task.id } // ⚡ Унікальний ключ обов'язковий!
+            ) { task ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ExpandableCard(
+                        title = task.title,
+                        description = task.description,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Кнопка видалення елемента зі списку
+                    IconButton(onClick = { tasks.remove(task) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Видалити")
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
+### Анімація додавання та видалення елементів: `Modifier.animateItem()`
+
+Щоб елементи списку додавалися, видалялися та зміщувалися з плавними анімаціями (замість миттєвого зникнення), просто додайте модифікатор **`Modifier.animateItem()`** до дочірнього елемента всередині `LazyColumn`:
+
+```kotlin
+items(
+    items = tasks,
+    key = { task -> task.id } // ⚡ Параметр key НЕОБХІДНИЙ для роботи анімацій!
+) { task ->
+    ExpandableCard(
+        title = task.title,
+        description = task.description,
+        modifier = Modifier.animateItem() // ⚡ Анімація появи, видалення та зміщення!
+    )
+}
+```
+
+---
+
 ## Повний практичний приклад: Список розгортаних карток курсу
 
 У цьому прикладі кожна картка списку `ExpandableCard` зберігає свій власний стан розгортання (`isExpanded`) під час скролінгу завдяки `rememberSaveable` та ключу `key`:
