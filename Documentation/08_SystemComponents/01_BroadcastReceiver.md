@@ -201,6 +201,37 @@ class MainActivity : AppCompatActivity() {
 > 
 > Забутий виклик `unregisterReceiver()` призведе до витоку пам'яті (**Memory Leak**), а виклик `unregisterReceiver()` без попередньої реєстрації викличе краш додатка (`IllegalArgumentException: Receiver not registered`).
 
+#### Реєстрація BroadcastReceiver у ViewModel
+
+Якщо ви відстежуєте системні події на рівні бізнес-логіки у `ViewModel`, реєстрація проводиться через `Application Context`, а скасування реєстрації обов'язково виконується у методі **`onCleared()`**:
+
+```kotlin
+class BatteryViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_BATTERY_LOW) {
+                Log.d("VM", "Критичний рівень заряду акумулятора!")
+            }
+        }
+    }
+
+    init {
+        val filter = IntentFilter(Intent.ACTION_BATTERY_LOW)
+        // Реєструємо receiver через Application Context при створенні ViewModel
+        ContextCompat.registerReceiver(context, batteryReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Обов'язково відписуємося при знищенні ViewModel, щоб уникнути витоку пам'яті!
+        context.unregisterReceiver(batteryReceiver)
+    }
+}
+```
+
 ---
 
 ## 5. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
