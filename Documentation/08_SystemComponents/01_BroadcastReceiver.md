@@ -20,6 +20,28 @@
         └─── (Зміна мережі) ──────► [ BroadcastReceiver ]
 ```
 
+### Створення `BroadcastReceiver`
+
+Щоб створити приймач сповіщень, необхідно створити клас (або анонімний об'єкт), який успадковується від абстрактного класу **`BroadcastReceiver`**, та перевизначити його єдиний обов'язковий метод **`onReceive(context, intent)`**:
+
+```kotlin
+class MyBroadcastReceiver : BroadcastReceiver() {
+
+    // Метод викликається системою Android щоразу, коли надходить Intent,
+    // який відповідає налаштованому фільтру цього приймача
+    override fun onReceive(context: Context?, intent: Intent?) {
+        // 1. Отримуємо Action події
+        val action = intent?.action
+
+        // 2. Виконуємо необхідну логіку
+        Log.d("BR", "Отримано бродкаст із акшеном: $action")
+    }
+}
+```
+
+> ⚠️ **Критичне правило `onReceive()`:**
+> Метод `onReceive()` виконується безпосередньо у **Головному потоці (Main Thread)** вашого застосунку! Усередині нього **категорично заборонено виконувати важкі чи тривалі операції** (запити до мережі, бази даних чи складні обчислення), оскільки це призведе до завісання інтерфейсу та помилки **ANR (Application Not Responding)**. Для тривалих задач викоритовують корутини чи `WorkManager`.
+
 ---
 
 ## 2. Механіка роботи: `Intent`, `Action` та `IntentFilter`
@@ -55,20 +77,21 @@
 ### 1. Системні бродкасти (System Broadcasts)
 Надсилаються самою ОС Android при виникненні системних подій чи зміні стану пристрою:
 
-| Системний Action (Intent) | Подія / Опис | Особливість реєстрації |
-| :--- | :--- | :--- |
-| **`Intent.ACTION_AIRPLANE_MODE_CHANGED`** | Перемикання режиму "У літаку" (Airplane Mode). | Динамічна у коді |
-| **`Intent.ACTION_POWER_CONNECTED`** | Підключення пристрою до зарядного пристрою. | Динамічна у коді |
-| **`Intent.ACTION_POWER_DISCONNECTED`** | Відключення від зарядного пристрою. | Динамічна у коді |
-| **`Intent.ACTION_BATTERY_LOW`** | Досягнення критично низького рівня заряду батареї. | Динамічна у коді |
-| **`Intent.ACTION_BATTERY_OKAY`** | Відновлення нормального рівня заряду після розрядки. | Динамічна у коді |
-| **`Intent.ACTION_BOOT_COMPLETED`** | Завершення завантаження системи після увімкнення пристрою. | **Статична у `AndroidManifest.xml`** |
-| **`Intent.ACTION_SCREEN_ON`** | Увімкнення дисплею пристрою. | Динамічна у коді |
-| **`Intent.ACTION_SCREEN_OFF`** | Вимкнення / блокування дисплею пристрою. | Динамічна у коді |
-| **`Intent.ACTION_USER_PRESENT`** | Успішне розблокування екрану користувачем. | Динамічна у коді |
-| **`Intent.ACTION_HEADSET_PLUG`** | Підключення або відключення дротових навушників. | Динамічна у коді |
-| **`ConnectivityManager.CONNECTIVITY_ACTION`** | Зміна стану мережевого з'єднання (Wi-Fi / Mobile Data). | Динамічна у коді |
-| **`Intent.ACTION_TIME_TICK`** | Хвилиний відлік системи (надсилається щохвилини). | Динамічна у коді |
+| Системний Action (Intent) | Подія / Опис | Особливість реєстрації | Додаткові дані в Intent (Extras) |
+| :--- | :--- | :--- | :--- |
+| **`Intent.ACTION_AIRPLANE_MODE_CHANGED`** | Перемикання режиму "У літаку" (Airplane Mode). | Динамічна у коді | `intent.getBooleanExtra("state", false)` — стан режиму (`true` — увімкнено, `false` — вимкнено). |
+| **`Intent.ACTION_BATTERY_CHANGED`** | Детальна зміна стану та відсотка заряду батареї. | Динамічна у коді | `BatteryManager.EXTRA_LEVEL` (поточний відсоток), `BatteryManager.EXTRA_STATUS` (статус: Charging/Full), `BatteryManager.EXTRA_PLUGGED` (джерело: USB/AC/Wireless). |
+| **`Intent.ACTION_HEADSET_PLUG`** | Підключення / відключення дротових навушників. | Динамічна у коді | `intent.getIntExtra("state", -1)` (`1` — навушники встромлено, `0` — вийнято), `intent.getStringExtra("name")` (назва пристрою). |
+| **`ConnectivityManager.CONNECTIVITY_ACTION`** | Зміна стану мережевого з'єднання (Wi-Fi / Mobile Data). | Динамічна у коді | `intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)` (`true` — мережа повністю відсутня). |
+| **`Intent.ACTION_POWER_CONNECTED`** | Підключення пристрою до зарядного пристрою. | Динамічна у коді | |
+| **`Intent.ACTION_POWER_DISCONNECTED`** | Відключення від зарядного пристрою. | Динамічна у коді | |
+| **`Intent.ACTION_BATTERY_LOW`** | Досягнення критично низького рівня заряду батареї. | Динамічна у коді | |
+| **`Intent.ACTION_BATTERY_OKAY`** | Відновлення нормального рівня заряду після розрядки. | Динамічна у коді | |
+| **`Intent.ACTION_BOOT_COMPLETED`** | Завершення завантаження системи після увімкнення пристрою. | **Статична у `AndroidManifest.xml`** | |
+| **`Intent.ACTION_SCREEN_ON`** | Увімкнення дисплею пристрою. | Динамічна у коді | |
+| **`Intent.ACTION_SCREEN_OFF`** | Вимкнення / блокування дисплею пристрою. | Динамічна у коді | |
+| **`Intent.ACTION_USER_PRESENT`** | Успішне розблокування екрану користувачем. | Динамічна у коді | |
+| **`Intent.ACTION_TIME_TICK`** | Хвилиний відлік системи (надсилається щохвилини). | Динамічна у коді | |
 
 ### 2. Кастомні бродкасти (Custom Broadcasts)
 Окрім системних подій, ви можете надсилати власні широкомовні повідомлення для міжпроцесної взаємодії чи передачі подій між компонентами за допомогою методу **`context.sendBroadcast(intent)`**.
@@ -166,7 +189,7 @@ class MainActivity : AppCompatActivity() {
 
 ---
 
-## 4. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
+## 5. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
 
 У сучасній архітектурі Android (MVVM + Coroutines + Compose) `BroadcastReceiver` перетворюють на реактивний потік **`Kotlin Flow`** за допомогою білдера **`callbackFlow`**.
 
