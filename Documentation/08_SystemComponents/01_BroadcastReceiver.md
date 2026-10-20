@@ -234,6 +234,61 @@ class BatteryViewModel(application: Application) : AndroidViewModel(application)
 
 ---
 
+### 3. Реєстрація Receiver для обробки кількох подій одночасно
+
+Один і той самий `BroadcastReceiver` може підписуватися та обробляти **одразу кілька різних дій (Actions)**.
+
+Для цього у `IntentFilter` додають декілька потрібних екшенів, а всередині методу `onReceive()` використовують оператор `when (intent?.action)` для розгалуження обробки подій.
+
+#### Динамічна реєстрація для кількох подій:
+```kotlin
+class PowerStateReceiver : BroadcastReceiver() {
+
+    override fun onReceive(context: Context?, intent: Intent?) {
+        // Розгалужуємо логіку залежно від того, яка саме подія надійшла
+        when (intent?.action) {
+            Intent.ACTION_POWER_CONNECTED -> {
+                Log.d("BR", "Пристрій підключено до живлення")
+            }
+            Intent.ACTION_POWER_DISCONNECTED -> {
+                Log.d("BR", "Пристрій відключено від живлення")
+            }
+            Intent.ACTION_BATTERY_LOW -> {
+                Log.d("BR", "Попередження: критично низький заряд батареї!")
+            }
+        }
+    }
+}
+
+// Реєстрація в Activity чи ViewModel:
+val filter = IntentFilter().apply {
+    addAction(Intent.ACTION_POWER_CONNECTED)    // Додаємо подію 1
+    addAction(Intent.ACTION_POWER_DISCONNECTED) // Додаємо подію 2
+    addAction(Intent.ACTION_BATTERY_LOW)        // Додаємо подію 3
+}
+
+ContextCompat.registerReceiver(
+    context,
+    powerStateReceiver,
+    filter,
+    ContextCompat.RECEIVER_NOT_EXPORTED
+)
+```
+
+#### Статична реєстрація в `AndroidManifest.xml` для кількох подій:
+У файлі маніфесту всередині одного `<intent-filter>` додають необхідну кількість тегів `<action>`:
+```xml
+<receiver android:name=".PowerStateReceiver" android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.POWER_CONNECTED" />
+        <action android:name="android.intent.action.POWER_DISCONNECTED" />
+        <action android:name="android.intent.action.BATTERY_LOW" />
+    </intent-filter>
+</receiver>
+```
+
+---
+
 ## 5. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
 
 У сучасній архітектурі Android (MVVM + Coroutines + Compose) `BroadcastReceiver` перетворюють на реактивний потік **`Kotlin Flow`** за допомогою білдера **`callbackFlow`**.
