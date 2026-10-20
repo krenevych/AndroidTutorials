@@ -96,26 +96,31 @@ class MyBroadcastReceiver : BroadcastReceiver() {
 | **`Intent.ACTION_TIME_TICK`** | Хвилиний відлік системи (надсилається щохвилини). | Динамічна у коді | |
 
 ### 2. Кастомні бродкасти (Custom Broadcasts)
-Окрім системних подій, ви можете надсилати власні широкомовні повідомлення для міжпроцесної взаємодії чи передачі подій між компонентами за допомогою методу **`context.sendBroadcast(intent)`**.
+У той час як системні події генеруються самою ОС Android, **кастомні бродкасти надсилаються безпосередньо з коду застосунку** за допомогою методу **`context.sendBroadcast(intent)`** для міжпроцесної взаємодії між різними додатками або для передачі подій між компонентами.
 
-Механіка передачі даних працює за таким принципом:
+Механіка відправки даних працює за таким принципом:
 1. **Створення `Intent` з унікальним Action:** Оголошується унікальний рядок-ідентифікатор події (наприклад, `"com.example.ACTION_DATA_PROCESSED"`).
 2. **Пакування даних у `Intent`:** За допомогою методу **`putExtra("key", value)`** усередині `Intent` запаковується корисне навантаження (рядки, числа, прапорці чи об'єкти).
-3. **Розпакування на стороні Приймача:** У методі `onReceive(context, intent)` слухач перевіряє `intent.action` і безпечно витягує дані за допомогою методів `intent.getStringExtra("key")` або `intent.getIntExtra("key", defaultValue)`.
+3. **Націлювання на конкретний додаток (Explicit Broadcast):** За замовчуванням кастомні бродкасти є неявними (Implicit) і надсилаються всім додаткам у системі. Щоб з міркувань безпеки заадресувати бродкаст **конкретному додаткам-отримувачу**, використовують метод **`intent.setPackage("com.example.targetapp")`**.
 
-#### Приклад надсилання кастомного бродкасту:
+#### Приклад надсилання кастомного бродкасту у коді:
 ```kotlin
 // 1. Створюємо Intent з унікальною дією та додаємо корисне навантаження
 val intent = Intent("com.example.ACTION_DATA_PROCESSED").apply {
     putExtra("key_message", "Обробку даних успішно завершено!")
     putExtra("key_code", 200)
+    
+    // (Опціонально) Обмежуємо відправку тільки конкретним адресатом:
+    setPackage("com.example.targetapp")
 }
 
 // 2. Відправляємо широкомовне сповіщення
 context.sendBroadcast(intent)
 ```
 
-#### Приклад зчитування даних у `BroadcastReceiver`:
+#### Розпакування даних на стороні Приймача (`BroadcastReceiver`):
+У методі `onReceive(context, intent)` слухач перевіряє `intent.action` і безпечно витягує дані за допомогою відповідних типів методів: `intent.getStringExtra("key")` або `intent.getIntExtra("key", defaultValue)`:
+
 ```kotlin
 override fun onReceive(context: Context?, intent: Intent?) {
     if (intent?.action == "com.example.ACTION_DATA_PROCESSED") {
@@ -289,7 +294,76 @@ ContextCompat.registerReceiver(
 
 ---
 
-## 5. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
+## 5. Симуляція системних та кастомних бродкастів через ADB
+
+Під час розробки та тестування додатка вам не обов'язково фізично вмикати чи вимикати кнопки на смартфоні, щоб перевірити роботу свого `BroadcastReceiver`. Ви можете зручно симулювати виникнення будь-яких бродкастів прямо з терміналу за допомогою утиліти **ADB** (команда `am broadcast`).
+
+---
+
+### 1. Симуляція системних подій через ADB
+
+* **Зміна режиму "У літаку" (Airplane Mode):**
+  ```bash
+  # Увімкнути режим у літаку (передаємо boolean екстру state = true)
+  adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
+
+  # Вимкнути режим у літаку (state = false)
+  adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state false
+  ```
+
+* **Підключення / Відключення зарядного пристрою:**
+  ```bash
+  # Симуляція підключення кабелю живлення
+  adb shell am broadcast -a android.intent.action.ACTION_POWER_CONNECTED
+
+  # Симуляція відключення кабелю живлення
+  adb shell am broadcast -a android.intent.action.ACTION_POWER_DISCONNECTED
+  ```
+
+* **Симуляція рівня заряду батареї (через утиліту `dumpsys`):**
+  ```bash
+  # Встановити рівень заряду 5% (викличе події розрядки)
+  adb shell dumpsys battery set level 5
+
+  # Повернути батарею пристрою у реальний стан
+  adb shell dumpsys battery reset
+  ```
+
+---
+
+### 2. Симуляція кастомних бродкастів із передачею Extra-даних
+
+Ви можете відправляти власні кастомні бродкасти у запущені пристрої, передаючи аргументи даних за допомогою спеціальних прапорців ADB:
+
+| Прапорець ADB | Тип даних у Kotlin | Приклад використання |
+| :--- | :--- | :--- |
+| **`--es`** | `String` (Рядок) | `--es key_message "Текст повідомлення"` |
+| **`--ei`** | `Int` (Ціле число) | `--ei key_code 200` |
+| **`--ez`** | `Boolean` (Логічне значення) | `--ez key_flag true` |
+
+#### Приклад надсилання кастомного бродкасту з терміналу:
+```bash
+adb shell am broadcast -a com.example.ACTION_DATA_PROCESSED --es key_message "Привіт з ADB!" --ei key_code 200
+```
+
+---
+
+### 3. Націлювання на конкретний додаток через ADB (Explicit Broadcast)
+
+Під час надсилання бродкастів з терміналу ви також можете заадресувати повідомлення конкретному пакетові або класу `BroadcastReceiver` за допомогою спеціальних прапорців ADB:
+
+* **Націлювання на конкретний пакет додатка (прапорець `-p`):**
+  ```bash
+  adb shell am broadcast -a com.example.ACTION_DATA_PROCESSED -p com.example.targetapp --es key_message "Привіт конкретному додатку!"
+  ```
+* **Націлювання на точний клас Receiver (прапорець `-n` / Component):**
+  ```bash
+  adb shell am broadcast -a com.example.ACTION_DATA_PROCESSED -n com.example.targetapp/.MyBroadcastReceiver --es key_message "Привіт Receiver!"
+  ```
+
+---
+
+## 6. Сучасний Android-підхід: Перетворення `BroadcastReceiver` у `Flow` через `callbackFlow`
 
 У сучасній архітектурі Android (MVVM + Coroutines + Compose) `BroadcastReceiver` перетворюють на реактивний потік **`Kotlin Flow`** за допомогою білдера **`callbackFlow`**.
 
