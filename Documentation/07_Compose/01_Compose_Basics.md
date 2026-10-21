@@ -471,6 +471,28 @@ UserBadge(
 | | `clip(shape)` | Обрізає елемент за формою (`CircleShape`, `RoundedCornerShape(8.dp)`). | `Modifier.clip(CircleShape)` |
 | | `shadow(elevation, shape)` | Малює тінь під елементом (ефект підняття). | `Modifier.shadow(4.dp)` |
 | **Події** | `clickable { ... }` | Робить елемент клікабельним з анімацією Ripple. | `Modifier.clickable { doSomething() }` |
+| **Скролінг** | `verticalScroll(rememberScrollState())` | Додає вертикальну прокрутку вмісту для контейнера (`Column`, `Box`). | `Modifier.verticalScroll(rememberScrollState())` |
+| | `horizontalScroll(rememberScrollState())` | Додає горизонтальну прокрутку вмісту для контейнера (`Row`, `Box`). | `Modifier.horizontalScroll(rememberScrollState())` |
+
+#### 💡 Що таке `rememberScrollState()`?
+
+Функція **`rememberScrollState()`** створює та зберігає об'єкт стану прокручування **`ScrollState`**, який виконує кілька важливих задач:
+
+1. **Збереження позиції скролу:** Пам'ятає поточну позицію прокрутки вмісту під час оновлення екрану (рекомпозицій) та при зміні конфігурації (повороті екрану).
+2. **Програмне керування скролінгом:** Дозволяє прокручувати контейнер кодом за допомогою асинхронних викликів (наприклад, кнопка "Вгору": `scrollState.animateScrollTo(0)`).
+3. **Відстеження стану:** Надає доступ до поточних координат скролу (наприклад, `scrollState.value` для визначення відстані прокрутки).
+
+```kotlin
+val scrollState = rememberScrollState()
+
+Column(
+    modifier = Modifier
+        .fillMaxSize()
+        .verticalScroll(scrollState) // Передаємо ScrollState у модифікатор
+) {
+    // Вміст, що перевищує висоту екрану...
+}
+```
 
 ---
 
