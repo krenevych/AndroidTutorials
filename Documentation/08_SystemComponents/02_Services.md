@@ -22,6 +22,18 @@
 > ⚠️ **Критичне правило Service:**
 > Як і `BroadcastReceiver` чи `Activity`, звичайний **Service за замовчуванням виконується у Головному потоці (Main Thread)**! Якщо ваша служба має робити важкі обчислення або завантаження, вона повинна самостійно запускати Корутини чи фонові потоки всередині себе (`onStartCommand` має відпрацювати миттєво). В іншому випадку служба заблокує UI вашого додатка (ANR).
 
+### Обов'язкова реєстрація в `AndroidManifest.xml`
+Як і будь-який інший фундаментальний компонент системи (наприклад, `Activity` чи `BroadcastReceiver`), кожен створений вами клас служби **обов'язково має бути зареєстрований у файлі маніфесту** `AndroidManifest.xml` усередині тегу `<application>`. Без цієї реєстрації система Android не знатиме про існування вашої служби і викине краш при спробі її запуску.
+
+```xml
+<manifest ...>
+    <application ...>
+        <!-- Реєстрація служби у маніфесті -->
+        <service android:name=".MyBackgroundService" />
+    </application>
+</manifest>
+```
+
 ### Основні методи життєвого циклу Служби
 Подібно до `Activity`, служба має свій життєвий цикл:
 * **`onCreate()`** — викликається лише один раз при першому створенні служби. Використовується для одноразового налаштування (наприклад, ініціалізації плеєра).
@@ -71,31 +83,45 @@
 
 ---
 
-## 3. Як створити Foreground Service (Активну службу)
+## 3. Foreground Service
 
-У сучасному Android `ForegroundService` — це єдиний надійний спосіб виконати безперервну фонову роботу (наприклад, плеєр чи таймер), поки додаток згорнуто.
+У сучасному Android `ForegroundService` — це єдиний надійний спосіб виконати **безперервну фонову роботу в реальному часі** (наприклад, відтворення музики, трекінг GPS чи таймер бігу), яку система **не має права відкладати чи переривати**, поки додаток згорнуто у фон.
+
+*(Примітка: для відкладених задач, які не потребують негайного виконання в реальному часі, використовується `WorkManager`, про який ми поговоримо у наступному розділі).*
 
 ### Крок 1. Дозволи у `AndroidManifest.xml`
-Починаючи з Android 9 (API 28), для запуску Foreground-служби потрібен дозвіл `FOREGROUND_SERVICE`. В Android 14+ необхідно вказати ще й **конкретний тип служби** (наприклад, відтворення медіа, синхронізація чи завантаження даних).
+Починаючи з Android 9 (API 28), для запуску Foreground-служби потрібен базовий дозвіл `FOREGROUND_SERVICE`. При цьому, з Android 14+ (API 34 та вище) система вимагає декларувати ще й **конкретний тип служби** (наприклад, відтворення медіа, синхронізація чи завантаження даних). Якщо ви спробуєте запустити `ForegroundService` без вказання типу або без відповідного дозволу, додаток негайно впаде з `SecurityException`!
 
 ```xml
 <manifest ...>
-    <!-- Базовий дозвіл на Foreground Service -->
+    <!-- 1. Базовий дозвіл на Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     
-    <!-- Дозвіл для конкретного типу (наприклад, завантаження даних) -->
+    <!-- 2. Специфічний дозвіл для конкретного типу (наприклад, dataSync) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- АБО для музичного плеєра: -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application>
-        <!-- Реєструємо службу та вказуємо її тип -->
+        <!-- 3. Реєструємо службу та ОБОВ'ЯЗКОВО вказуємо її тип, що відповідає дозволу -->
         <service
             android:name=".DownloadService"
             android:foregroundServiceType="dataSync" />
     </application>
 </manifest>
 ```
+
+> 💡 **Правило Android 14+:** Тип служби (`foregroundServiceType`) у тегу `<service>` та спеціальний дозвіл у тегу `<uses-permission>` **завжди мають йти в парі!** Якщо ви вказуєте тип `dataSync`, ви зобов'язані запитати відповідний дозвіл `FOREGROUND_SERVICE_DATA_SYNC`.
+
+#### Популярні типи `foregroundServiceType` в Android 14+ (API 34):
+
+| Тип (`foregroundServiceType`) | Для чого використовується? | Відповідний дозвіл (`uses-permission`) |
+| :--- | :--- | :--- |
+| **`mediaPlayback`** | Музичні та відеоплеєри. | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` |
+| **`location`** | Навігація, трекінг бігу, відстеження GPS у реальному часі. | `FOREGROUND_SERVICE_LOCATION` |
+| **`dataSync`** | Завантаження, вивантаження великих файлів чи бекап баз даних. | `FOREGROUND_SERVICE_DATA_SYNC` |
+| **`phoneCall`** | VoIP застосунки, відеодзвінки (Telegram, WhatsApp). | `FOREGROUND_SERVICE_PHONE_CALL` |
+| **`connectedDevice`** | Зв'язок із Bluetooth-пристроями (годинники, фітнес-браслети). | `FOREGROUND_SERVICE_CONNECTED_DEVICE` |
+| **`specialUse`** | Усі інші унікальні випадки, які не підпадають під категорії вище. | `FOREGROUND_SERVICE_SPECIAL_USE` |
+
 
 ### Крок 2. Створення класу Служби
 
