@@ -203,6 +203,117 @@ ContextCompat.startForegroundService(context, serviceIntent)
 
 ---
 
+## 4. Bound Service
+
+Якщо `Foreground Service` працює як самостійний робітник, якому ви дали команду "Старт" і забули, то **`Bound Service`** працює як сервер. До нього можна підключитися (прив'язатися) з `Activity`, щоб **викликати його методи, передавати дані в реальному часі та отримувати результати**.
+
+Ідеальний приклад — музичний плеєр. `Activity` повинна мати можливість викликати у служби методи `play()`, `pause()`, `skipToNext()` та отримувати поточний час треку.
+
+Щоб налаштувати таку взаємодію в межах одного додатка, використовується механізм **`LocalBinder`**.
+
+### Крок 1. Створення служби з LocalBinder
+
+Усередині класу служби необхідно створити внутрішній клас, який успадковується від `Binder`. Його єдина мета — повернути екземпляр самої служби клієнту (`Activity`). 
+
+Після цього ми повертаємо цей `Binder` у методі `onBind`:
+
+```kotlin
+class MusicPlayerService : Service() {
+
+    // 1. Створюємо наш Binder (Посередник)
+    inner class LocalBinder : Binder() {
+        // Метод, який поверне саму службу для доступу до її методів
+        fun getService(): MusicPlayerService = this@MusicPlayerService
+    }
+
+    private val binder = LocalBinder()
+
+    // 2. Цей метод викликається, коли Activity викликає bindService()
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
+    }
+
+    // -----------------------------------------------------
+    // Публічні методи служби, які буде викликати Activity
+    // -----------------------------------------------------
+    
+    fun playMusic() {
+        Log.d("MusicService", "Музика грає...")
+        // Логіка MediaPlayer
+    }
+
+    fun pauseMusic() {
+        Log.d("MusicService", "Музика на паузі")
+    }
+
+    fun getCurrentProgress(): Int {
+        return 42 // Заглушка (повертає відсоток або секунди)
+    }
+}
+```
+
+### Крок 2. Прив'язка служби до Activity (`ServiceConnection`)
+
+Щоб `Activity` могла підключитися до служби, їй потрібен об'єкт **`ServiceConnection`**, який слухатиме момент підключення або непередбачуваного розриву зв'язку.
+
+* Прив'язка (`bindService`) зазвичай відбувається у **`onStart()`**.
+* Відв'язка (`unbindService`) — у **`onStop()`** (щоб не тримати службу живою, коли екран згорнуто).
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+
+    // Посилання на нашу службу
+    private var musicService: MusicPlayerService? = null
+    private var isBound = false
+
+    // Слухач з'єднання зі службою
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // Отримуємо Binder і витягуємо з нього нашу службу!
+            val binder = service as MusicPlayerService.LocalBinder
+            musicService = binder.getService()
+            isBound = true
+            Log.d("App", "Службу підключено!")
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            musicService = null
+            isBound = false
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Створюємо Intent і прив'язуємося до служби
+        val intent = Intent(this, MusicPlayerService::class.java)
+        // BIND_AUTO_CREATE означає: якщо служба ще не запущена — створи її!
+        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Обов'язково відв'язуємося, щоб не було витоку пам'яті
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
+        }
+    }
+
+    // -----------------------------------------------------
+    // Виклик методів служби по кліку на кнопки UI
+    // -----------------------------------------------------
+    private fun onPlayClicked() {
+        if (isBound) {
+            musicService?.playMusic() // Прямий виклик методу!
+        }
+    }
+}
+```
+
+> 💡 **Примітка:** Якщо служба запущена **тільки** через `bindService()` (без виклику `startService()`), вона буде автоматично знищена системою (викличеться `onDestroy()`) тієї ж миті, коли остання `Activity` викличе `unbindService()`. 
+
+---
+
 ## Підсумок
 
 * **`Service`** — це системний компонент без UI, який використовується для тривалої фонової роботи. Працює у Main Thread.
