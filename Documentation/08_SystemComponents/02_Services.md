@@ -110,6 +110,26 @@
 ```
 
 > 💡 **Правило Android 14+:** Тип служби (`foregroundServiceType`) у тегу `<service>` та спеціальний дозвіл у тегу `<uses-permission>` **завжди мають йти в парі!** Якщо ви вказуєте тип `dataSync`, ви зобов'язані запитати відповідний дозвіл `FOREGROUND_SERVICE_DATA_SYNC`.
+> 
+Одна служба може мати **декілька типів одночасно**. У такому випадку типи розділяються символом `|`, і вам необхідно додати в маніфест обидва відповідні дозволи.
+
+```xml
+<manifest ...>
+    <!-- Базовий дозвіл на Foreground Service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- Додаємо ДВА відповідні специфічні дозволи -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <application>
+        <!-- Вказуємо обидва типи через символ '|' -->
+        <service
+            android:name=".RunningTrackerService"
+            android:foregroundServiceType="mediaPlayback|location" />
+    </application>
+</manifest>
+```
 
 #### Популярні типи `foregroundServiceType` в Android 14+ (API 34):
 
