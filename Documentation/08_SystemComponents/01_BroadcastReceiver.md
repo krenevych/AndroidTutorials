@@ -426,8 +426,12 @@ class AirplaneModeTracker(private val context: Context) {
 
 ### 2. Підключення у `ViewModel`:
 
+Для зручності у цьому прикладі ми створимо `AirplaneModeTracker` безпосередньо всередині ViewModel (зазвичай для цього використовують ін'єкцію залежностей, наприклад, Hilt). Щоб отримати доступ до `Context`, використаємо `AndroidViewModel`:
+
 ```kotlin
-class MainViewModel(airplaneModeTracker: AirplaneModeTracker) : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val airplaneModeTracker = AirplaneModeTracker(application.applicationContext)
 
     // Перетворюємо холодний callbackFlow у гарячий StateFlow для UI
     val isAirplaneMode: StateFlow<Boolean> = airplaneModeTracker.isAirplaneModeEnabled
@@ -439,6 +443,12 @@ class MainViewModel(airplaneModeTracker: AirplaneModeTracker) : ViewModel() {
 }
 ```
 
+> 💡 **Чому ми успадковуємося від `AndroidViewModel`?**
+> 
+> Класичний клас `ViewModel` не має доступу до `Context`, оскільки він не повинен зберігати посилання на `Activity` (щоб уникнути витоків пам'яті при повороті екрану). Проте нашому трекеру `AirplaneModeTracker` необхідний контекст для виклику `registerReceiver`. 
+> 
+> Успадковуючись від **`AndroidViewModel`**, ми безпечно отримуємо **`Application Context`**, який живе стільки ж, скільки й сам додаток, тому він ніколи не викликає витоків пам'яті.
+
 ---
 
 ### 3. Відображення у Jetpack Compose:
@@ -447,7 +457,7 @@ class MainViewModel(airplaneModeTracker: AirplaneModeTracker) : ViewModel() {
 
 ```kotlin
 @Composable
-fun MainScreen(viewModel: MainViewModel = viewModel()) {
+fun MainScreen(viewModel: MainViewModel) {
     // Зчитуємо стан BroadcastReceiver як Compose State
     val isAirplaneMode by viewModel.isAirplaneMode.collectAsStateWithLifecycle()
 
@@ -474,6 +484,14 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     }
 }
 ```
+
+> 💡 **Примітка:** При виклику `MainScreen()` з вашої `MainActivity`, ви передаєте туди вже існуючий екземпляр ViewModel, отриманий через `val viewModel: MainViewModel by viewModels()`.
+
+#### Як працює `collectAsStateWithLifecycle()`?
+Ця функція є офіційним золотим стандартом Google для збирання `StateFlow` у Jetpack Compose:
+1. **Виклик лише у `@Composable`:** Її можна викликати **виключно зсередини `@Composable` функцій**, оскільки вона взаємодіє з механізмами малювання Compose.
+2. **Конвертація для Compose:** Вона конвертує `StateFlow` з `ViewModel` у звичайний об'єкт `State<T>`, який вміє розуміти Compose. Коли надходить нова подія від бродкасту, Compose бачить зміну `State` і миттєво перемальовує екран.
+3. **Розуміння Життєвого циклу (Lifecycle):** Якщо користувач згорне додаток (натисне кнопку Home), підписка на `StateFlow` автоматично призупиниться. Завдяки оператору `stateIn(WhileSubscribed(5000))` у `ViewModel`, через 5 секунд потік зупиниться, і `BroadcastReceiver` зробить `unregisterReceiver`. Це зберігає батарею пристрою! При поверненні в додаток усе автоматично запуститься знову.
 
 ---
 
