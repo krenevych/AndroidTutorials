@@ -38,3 +38,5 @@
 
 ## 08. Системні компоненти Android
 * [BroadcastReceiver та міжпроцесна взаємодія (`01_BroadcastReceiver.md`)](08_SystemComponents/01_BroadcastReceiver.md) — 4 компоненти Android, системні та кастомні бродкасти, статична реєстрація в `AndroidManifest.xml` та динамічна у коді, прапорці безпеки Android 14+ (`RECEIVER_NOT_EXPORTED`), перетворення BroadcastReceiver у `Flow` через `callbackFlow` та відображення баннера у Compose.
+* [Служби (Services) (`02_Services.md`)](08_SystemComponents/02_Services.md) — відмінності `Service` від `Coroutines`, 3 типи служб, створення `ForegroundService` із постійним сповіщенням (`startForeground`) та дозволи Android 14+ (`foregroundServiceType`).
+* [Гарантоване фонове виконання: WorkManager (`03_WorkManager.md`)](08_SystemComponents/03_WorkManager.md) — гарантовані відкладені задачі, `CoroutineWorker`, умови запуску (Constraints: Wi-Fi, зарядка), `Result.retry()` та підсумкова таблиця вибору (Coroutines vs Service vs WorkManager).
