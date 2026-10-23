@@ -160,7 +160,14 @@ class DownloadService : Service() {
     // Прив'язана служба (Bound) нам не потрібна, тому повертаємо null
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // Викликається під час запуску служби
+    // Викликається лише один раз при створенні служби
+    override fun onCreate() {
+        super.onCreate()
+        // Обов'язково створюємо канал перед створенням сповіщення!
+        createNotificationChannel() 
+    }
+
+    // Викликається щоразу при старті служби через startForegroundService
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         
         // 1. Створюємо сповіщення
@@ -175,14 +182,29 @@ class DownloadService : Service() {
         return START_NOT_STICKY // Служба не перезапуститься автоматично у разі крашу
     }
 
+    private fun createNotificationChannel() {
+        // Канали обов'язкові починаючи з Android 8.0 (API 26)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "download_channel"
+            val channelName = "Фонове завантаження"
+            val channel = NotificationChannel(
+                channelId,
+                channelName,
+                NotificationManager.IMPORTANCE_LOW // Низький пріоритет (без звукового сигналу)
+            )
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
     private fun createNotification(): Notification {
-        // Створення NotificationChannel для Android 8.0+ ...
         val channelId = "download_channel"
         
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Завантаження файлу")
             .setContentText("Файл завантажується у фоні...")
-            .setSmallIcon(R.drawable.ic_download)
+            // Обов'язкова іконка (зазвичай прозора SVG/XML з папки drawable)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) 
             .build()
     }
     
@@ -192,6 +214,12 @@ class DownloadService : Service() {
     }
 }
 ```
+
+> 💡 **Що таке `NotificationChannel` і навіщо він потрібен?**
+> Починаючи з Android 8.0 (API 26), Google заборонив надсилати будь-які сповіщення без вказівки Каналу (Channel). 
+> Канали були створені для користувачів: тепер у налаштуваннях телефона користувач бачить не один загальний вимикач "Вимкнути всі сповіщення", а список категорій. Наприклад, він може повністю вимкнути звуки для каналу "Фонове завантаження", але залишити звук для каналу "Особисті повідомлення". Якщо ви спробуєте надіслати `Notification` без прив'язки до зареєстрованого каналу, додаток просто впаде.
+>
+> У нашому прикладі рядок **`val channelId = "download_channel"`** — це унікальний текстовий ідентифікатор-зв'язка. Ми створюємо системний канал із цим ID у методі `createNotificationChannel()`, а потім прив'язуємо наше конкретне сповіщення до цього ж ID у `NotificationCompat.Builder(this, channelId)`.
 
 ### Крок 3. Запуск служби з Activity / ViewModel
 Запуск Foreground Service також змінився. Потрібно використовувати **`ContextCompat.startForegroundService()`**:
