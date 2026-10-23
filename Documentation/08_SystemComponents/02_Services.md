@@ -96,19 +96,36 @@
 
 *(Примітка: для відкладених задач, які не потребують негайного виконання в реальному часі, використовується `WorkManager`, про який ми поговоримо у наступному розділі).*
 
-### Крок 1. Дозволи у `AndroidManifest.xml`
-Починаючи з Android 9 (API 28), для запуску Foreground-служби потрібен базовий дозвіл `FOREGROUND_SERVICE`. При цьому, з Android 14+ (API 34 та вище) система вимагає декларувати ще й **конкретний тип служби** (наприклад, відтворення медіа, синхронізація чи завантаження даних). Якщо ви спробуєте запустити `ForegroundService` без вказання типу або без відповідного дозволу, додаток негайно впаде з `SecurityException`!
+### Крок 1. Декларація сервісу у `AndroidManifest.xml` та дозволи
+
+Починаючи з Android 14+ (API 34 та вище) система вимагає декларувати **конкретний тип служби** (наприклад, відтворення медіа, синхронізація чи завантаження даних).
 
 ```xml
+        <service
+            android:foregroundServiceType="X" />
+```
+
+Крім цього, запуск Foreground Service жорстко контролюється трьома рівнями дозволів:
+
+ 1. **Базовий дозвіл:** Завжди потрібен загальний дозвіл `FOREGROUND_SERVICE`.
+
+ 2. **Специфічний дозвіл типу:** Кожен вказаний вами тип (`foregroundServiceType="X"`) у тегу `<service>` жорстко вимагає наявності відповідного специфічного дозволу `FOREGROUND_SERVICE_X` у маніфесті (вони мають завжди йти в парі). 
+
+ 3. **Дозвіл на саму функцію:** Для "небезпечних" типів (наприклад, `location` чи `camera`) система додатково перевірить, чи має додаток звичайні дозволи на доступ до цієї функції (наприклад, `ACCESS_COARSE_LOCATION` чи `CAMERA`).
+>
+> *Якщо хоча б один із цих дозволів не буде вказаний, додаток негайно впаде з помилкою `SecurityException`!*
+
+#### Приклад для звичайної служби (один тип):
+```xml
 <manifest ...>
-    <!-- 1. Базовий дозвіл на Foreground Service -->
+    <!-- 1. Базовий дозвіл -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     
-    <!-- 2. Специфічний дозвіл для конкретного типу (наприклад, dataSync) -->
+    <!-- 2. Специфічний дозвіл для типу dataSync -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application>
-        <!-- 3. Реєструємо службу та ОБОВ'ЯЗКОВО вказуємо її тип, що відповідає дозволу -->
+        <!-- Вказуємо тип служби -->
         <service
             android:name=".DownloadService"
             android:foregroundServiceType="dataSync" />
@@ -116,18 +133,21 @@
 </manifest>
 ```
 
-> 💡 **Правило Android 14+:** Тип служби (`foregroundServiceType`) у тегу `<service>` та спеціальний дозвіл у тегу `<uses-permission>` **завжди мають йти в парі!** Якщо ви вказуєте тип `dataSync`, ви зобов'язані запитати відповідний дозвіл `FOREGROUND_SERVICE_DATA_SYNC`.
-> 
-Одна служба може мати **декілька типів одночасно**. У такому випадку типи розділяються символом `|`, і вам необхідно додати в маніфест обидва відповідні дозволи.
+> 💡 Одна служба може мати **декілька типів одночасно**. У такому випадку типи розділяються символом `|` (наприклад, `mediaPlayback|location`). 
+> Також необхідно додати в маніфест **усі дозволи, які вимагаються кожним із вказаних типів**.
 
+#### Приклад для комбінованої служби (декілька типів + дозвіл на функцію):
 ```xml
 <manifest ...>
-    <!-- Базовий дозвіл на Foreground Service -->
+    <!-- 1. Базовий дозвіл -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     
-    <!-- Додаємо ДВА відповідні специфічні дозволи -->
+    <!-- 2. Специфічні дозволи для обох типів -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- 3. Звичайний дозвіл на доступ до функції (оскільки використовується тип location) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application>
         <!-- Вказуємо обидва типи через символ '|' -->
@@ -140,15 +160,19 @@
 
 #### Популярні типи `foregroundServiceType` в Android 14+ (API 34):
 
-| Тип (`foregroundServiceType`) | Для чого використовується? | Відповідний дозвіл (`uses-permission`) |
-| :--- | :--- | :--- |
-| **`mediaPlayback`** | Музичні та відеоплеєри. | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` |
-| **`location`** | Навігація, трекінг бігу, відстеження GPS у реальному часі. | `FOREGROUND_SERVICE_LOCATION` |
-| **`dataSync`** | Завантаження, вивантаження великих файлів чи бекап баз даних. | `FOREGROUND_SERVICE_DATA_SYNC` |
-| **`phoneCall`** | VoIP застосунки, відеодзвінки (Telegram, WhatsApp). | `FOREGROUND_SERVICE_PHONE_CALL` |
-| **`connectedDevice`** | Зв'язок із Bluetooth-пристроями (годинники, фітнес-браслети). | `FOREGROUND_SERVICE_CONNECTED_DEVICE` |
-| **`specialUse`** | Усі інші унікальні випадки, які не підпадають під категорії вище. | `FOREGROUND_SERVICE_SPECIAL_USE` |
+| Тип (`foregroundServiceType`) | Для чого використовується? | Специфічний дозвіл на Foreground | Дозвіл на функцію (Required Permissions) |
+| :--- | :--- | :--- | :--- |
+| **`mediaPlayback`** | Музичні та відеоплеєри. | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | — |
+| **`location`** | Навігація, трекінг бігу, відстеження GPS у реальному часі. | `FOREGROUND_SERVICE_LOCATION` | `ACCESS_COARSE_LOCATION` або `ACCESS_FINE_LOCATION` |
+| **`dataSync`** | Завантаження, вивантаження великих файлів чи бекап баз даних. | `FOREGROUND_SERVICE_DATA_SYNC` | — |
+| **`phoneCall`** | VoIP застосунки, відеодзвінки (Telegram, WhatsApp). | `FOREGROUND_SERVICE_PHONE_CALL` | `MANAGE_OWN_CALLS` |
+| **`camera`** | Запис відео чи робота з камерою у фоні. | `FOREGROUND_SERVICE_CAMERA` | `CAMERA` |
+| **`microphone`** | Фоновий запис голосу або диктофон. | `FOREGROUND_SERVICE_MICROPHONE` | `RECORD_AUDIO` |
+| **`connectedDevice`** | Зв'язок із Bluetooth-пристроями (годинники, фітнес-браслети). | `FOREGROUND_SERVICE_CONNECTED_DEVICE` | `BLUETOOTH_CONNECT` або інші BT-дозволи |
+| **`specialUse`** | Усі інші унікальні випадки, які не підпадають під категорії вище. | `FOREGROUND_SERVICE_SPECIAL_USE` | — |
 
+> 🚨 **Неочевидний підводний камінь — Невидиме сповіщення (Android 13+):** 
+> Починаючи з Android 13 (API 33), для показу будь-яких сповіщень додатки зобов'язані запитувати у користувача runtime-дозвіл **`android.permission.POST_NOTIFICATIONS`**. Якщо ви не маєте цього дозволу, ваша Foreground-служба успішно запуститься і працюватиме, але саме сповіщення буде "проковтнуте" системою і не з'явиться у статус-барі!
 
 ### Крок 2. Створення класу Служби
 
