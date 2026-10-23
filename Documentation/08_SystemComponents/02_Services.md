@@ -102,6 +102,7 @@
 
 ```xml
         <service
+            android:name=".MyForegroundService"
             android:foregroundServiceType="X" />
 ```
 
