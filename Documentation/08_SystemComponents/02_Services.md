@@ -446,25 +446,25 @@ class MusicPlayerService : Service() {
 ```
 
 
-#### В Activity (прив'язка та прокидання в Compose):
+#### Спосіб 1: Підписка безпосередньо у Compose UI (Через `collectAsState`)
+
+Якщо ви зберігаєте посилання на службу у `State` змінній (`var musicService by mutableStateOf(...)`), ви можете підписатися на її потік безпосередньо всередині блоку `@Composable`:
+
 ```kotlin
 class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
-
-     //      ...
+     // ...
       
       setContent {
           ComposeTheme {
-              // ...
               
               // Підписуємося на Flow прогресу (якщо сервіс не підключений, то дефолтний 0f)
               val progress by (musicService?.progress ?: MutableStateFlow(0f)).collectAsState()
 
               Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                   MediaPlayerScreen(
-                      // .. 
-                      progress = progress,
+                      progress = progress
                       // ...
                   )
               }
@@ -474,10 +474,14 @@ class MainActivity : ComponentActivity() {
 }
 ```
 
-#### На етапі звʼязку з сервісом
+#### Спосіб 2: Підписка на етапі підключення (`ServiceConnection`)
+
+Якщо ви хочете контролювати збір даних на рівні `Activity`, ви можете створити локальний стан `progress` і оновлювати його всередині корутини при підключенні служби `onServiceConnected`. Цей підхід є більш класичним:
+
 ```kotlin
 class MainActivity : ComponentActivity() {
 
+    // Локальний стан, який буде передаватися у Compose
     private var progress by mutableFloatStateOf(0F)
     
     private val connection = object : ServiceConnection {
@@ -488,8 +492,8 @@ class MainActivity : ComponentActivity() {
             // Щойно служба підключилася, підписуємося на її внутрішній StateFlow!
             lifecycleScope.launch {
                   repeatOnLifecycle(Lifecycle.State.STARTED) {
-                      musicService?.progress?.collect{
-                          progress = it
+                      musicService?.progress?.collect { p ->
+                          progress = p
                       }
                 }
             }
