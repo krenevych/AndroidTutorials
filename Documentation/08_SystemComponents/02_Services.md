@@ -455,22 +455,15 @@ class MainActivity : ComponentActivity() {
       
       setContent {
           ComposeTheme {
-
-              var currentTrack by remember { mutableStateOf("") }
-             
+              // ...
+              
               // Підписуємося на Flow прогресу (якщо сервіс не підключений, то дефолтний 0f)
               val progress by (musicService?.progress ?: MutableStateFlow(0f)).collectAsState()
 
               Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-
-
-
                   MediaPlayerScreen(
-                      currentTrack = currentTrack,
+                      // .. 
                       progress = progress,
-                      onPlayClick = {
-                          currentTrack = musicService?.playMusic() ?: "Unknown"
-                      },
                       // ...
                   )
               }
