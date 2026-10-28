@@ -297,33 +297,61 @@ class MusicPlayerService : Service() {
 
     // 1. Створюємо наш Binder (Посередник)
     inner class LocalBinder : Binder() {
-        // Метод, який поверне саму службу для доступу до її методів
-        fun getService(): MusicPlayerService = this@MusicPlayerService
+      // Метод, який поверне саму службу для доступу до її методів
+      fun getService(): MusicPlayerService = this@MusicPlayerService
     }
 
     private val binder = LocalBinder()
-
+  
     // 2. Цей метод викликається, коли Activity викликає bindService()
     override fun onBind(intent: Intent?): IBinder {
-        return binder
+      return binder
     }
 
+    // Список треків
+    private val playlist = listOf(
+      "Beethoven - Symphony No. 9",
+      "Mozart - Eine kleine Nachtmusik",
+      "Bach - Toccata and Fugue",
+      "Vivaldi - The Four Seasons"
+    )
+
+    // Індекс поточного треку
+    private var currentTrackIndex = 0
     // -----------------------------------------------------
     // Публічні методи служби, які буде викликати Activity
     // -----------------------------------------------------
-    
+
+    fun getCurrentTrack(): String {
+      return playlist[currentTrackIndex]
+    }
+  
     fun playMusic() {
-        Log.d("MusicService", "Музика грає...")
-        // Логіка MediaPlayer
+      Log.d(TAG, "Музика грає: ${getCurrentTrack()}")
+      // Логіка MediaPlayer
+      return getCurrentTrack()
     }
-
+  
     fun pauseMusic() {
-        Log.d("MusicService", "Музика на паузі")
+      Log.d(TAG, "Музика грає: ${getCurrentTrack()}")
+      // Логіка MediaPlayer
+      return getCurrentTrack()
     }
-
-    fun getCurrentProgress(): Int {
-        return 42 // Заглушка (повертає відсоток або секунди)
+  
+    fun nextTrack(): String {
+      // Зациклюємо плейлист
+      currentTrackIndex = (currentTrackIndex + 1) % playlist.size
+      Log.d(TAG, "Наступний трек: ${getCurrentTrack()}")
+      return getCurrentTrack()
     }
+  
+    fun previousTrack(): String {
+      // Зациклюємо плейлист
+      currentTrackIndex = (currentTrackIndex + playlist.size - 1) % playlist.size
+      Log.d(TAG, "Попередній трек: ${getCurrentTrack()}")
+      return getCurrentTrack()
+    }
+  
 }
 ```
 
@@ -335,11 +363,10 @@ class MusicPlayerService : Service() {
 * Відв'язка (`unbindService`) — у **`onStop()`** (щоб не тримати службу живою, коли екран згорнуто).
 
 ```kotlin
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
     // Посилання на нашу службу
-    private var musicService: MusicPlayerService? = null
-    private var isBound = false
+    private var musicService by mutableStateOf<MusicPlayerService?>(null)
 
     // Слухач з'єднання зі службою
     private val connection = object : ServiceConnection {
@@ -347,13 +374,11 @@ class MainActivity : AppCompatActivity() {
             // Отримуємо Binder і витягуємо з нього нашу службу!
             val binder = service as MusicPlayerService.LocalBinder
             musicService = binder.getService()
-            isBound = true
             Log.d("App", "Службу підключено!")
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             musicService = null
-            isBound = false
         }
     }
 
@@ -368,25 +393,92 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         // Обов'язково відв'язуємося, щоб не було витоку пам'яті
-        if (isBound) {
-            unbindService(connection)
-            isBound = false
-        }
+        unbindService(connection)
+        musicService = null
     }
 
-    // -----------------------------------------------------
-    // Виклик методів служби по кліку на кнопки UI
-    // -----------------------------------------------------
-    private fun onPlayClicked() {
-        if (isBound) {
-            musicService?.playMusic() // Прямий виклик методу!
+    override fun onCreate(savedInstanceState: Bundle?) {
+ 
+      setContent {
+        ComposeTheme {
+  
+          var currentTrack by remember { mutableStateOf("") }
+          
+          Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            MediaPlayerScreen(
+              currentTrack = currentTrack,
+              onPlayClick = {
+                currentTrack = musicService?.playMusic() ?: "Unknown"
+              },
+              // ...
+            )
+          }
         }
+      }
     }
+
 }
+
+
+
 ```
 
 > 💡 **Примітка:** Одна і та сама служба може бути одночасно запущеною через `startService` та прив'язаною через `bindService`.
 > Якщо служба запущена **тільки** через `bindService()` (без виклику `startService()`), вона буде автоматично знищена системою (викличеться `onDestroy()`) тієї ж миті, коли остання `Activity` викличе `unbindService()`. 
+
+### Крок 3. Отримання даних зі Служби у зворотному напрямку (через StateFlow)
+
+Часто буває недостатньо просто викликати методи служби з `Activity` — потрібно **слухати дані**, які генерує служба (наприклад, поточний прогрес пісні, який трек грає або статус завантаження файлу).
+
+Сучасний спосіб повернути дані з `Bound Service` в `Activity` (і передати їх далі у Compose UI) — це надати публічний **`StateFlow`**:
+
+#### У Службі:
+```kotlin
+class MusicPlayerService : Service() {
+    
+    // StateFlow для зберігання прогресу від 0.0 до 1.0
+    private val _progress = MutableStateFlow(0f)
+    val progress: StateFlow<Float> = _progress.asStateFlow()
+  
+    // ...
+
+}
+```
+
+#### В Activity (прив'язка та прокидання в Compose):
+```kotlin
+class MainActivity : ComponentActivity() {
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+
+     //      ...
+      
+      setContent {
+          ComposeTheme {
+
+              var currentTrack by remember { mutableStateOf("") }
+             
+              // Підписуємося на Flow прогресу (якщо сервіс не підключений, то дефолтний 0f)
+              val progress by (musicService?.progress ?: MutableStateFlow(0f)).collectAsState()
+
+              Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+
+
+
+                  MediaPlayerScreen(
+                      currentTrack = currentTrack,
+                      progress = progress,
+                      onPlayClick = {
+                          currentTrack = musicService?.playMusic() ?: "Unknown"
+                      },
+                      // ...
+                  )
+              }
+          }
+      }
+  }
+}
+```
 
 ---
 
