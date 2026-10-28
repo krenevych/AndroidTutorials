@@ -263,7 +263,8 @@ ContextCompat.startForegroundService(context, serviceIntent)
 
 Ідеальний приклад — музичний плеєр. `Activity` повинна мати можливість викликати у служби методи `play()`, `pause()`, `skipToNext()` та отримувати поточний час треку.
 
-> 💡 **Робочий приклад:** Ви можете знайти готовий завершений код гібридної `Bound Service` (з `LocalBinder`) у репозиторії на GitHub: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`boundservice`**).
+> 📦 **Початковий проект:** Заготовку проекту (базовий UI без прив'язки служби) ви знайдете у репозиторії: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`boundservice`**).\
+> 💡 **Приклад розв'язку:** Готовий завершений код гібридної `Bound Service` (з `LocalBinder` та `StateFlow`) знаходиться на гілці **`boundservice_end`** (модуль **`boundservice`**).
 
 ### 🔄 Специфічний життєвий цикл Bound Service
 `Bound Service` має всі стандартні методи життєвого циклу служби (такі як `onCreate()` чи `onDestroy()`), але оскільки вона викликається через `bindService()`, метод `onStartCommand()` тут **не спрацьовує**. Натомість активно залучаються специфічні методи прив'язки:
