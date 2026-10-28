@@ -445,6 +445,7 @@ class MusicPlayerService : Service() {
 }
 ```
 
+
 #### В Activity (прив'язка та прокидання в Compose):
 ```kotlin
 class MainActivity : ComponentActivity() {
@@ -472,6 +473,35 @@ class MainActivity : ComponentActivity() {
   }
 }
 ```
+
+#### На етапі звʼязку з сервісом
+```kotlin
+class MainActivity : ComponentActivity() {
+
+    private var progress by mutableFloatStateOf(0F)
+    
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as MusicPlayerService.LocalBinder
+            musicService = binder.getService()
+      
+            // Щойно служба підключилася, підписуємося на її внутрішній StateFlow!
+            lifecycleScope.launch {
+                  repeatOnLifecycle(Lifecycle.State.STARTED) {
+                      musicService?.progress?.collect{
+                          progress = it
+                      }
+                }
+            }
+        }
+  
+        // ... 
+    }
+  
+    // ... 
+}
+```
+
 
 ---
 
