@@ -95,7 +95,7 @@
 
 *(Примітка: для відкладених задач, які не потребують негайного виконання в реальному часі, використовується `WorkManager`, про який ми поговоримо у наступному розділі).*
 
-> 💡 **Робочий приклад:** Ви можете знайти готовий завершений код Foreground-служби у репозиторії на GitHub: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`service`**).
+> 💡 **Робочий приклад:** Ви можете знайти готовий завершений код Foreground-служби у репозиторії на GitHub: [krenevych/Compose](https://github.com/krenevych/Compose) (гілка **`main`**, модуль **`service`**).
 
 ### Крок 1. Декларація сервісу у `AndroidManifest.xml` та дозволи
 
@@ -263,7 +263,7 @@ ContextCompat.startForegroundService(context, serviceIntent)
 
 Ідеальний приклад — музичний плеєр. `Activity` повинна мати можливість викликати у служби методи `play()`, `pause()`, `skipToNext()` та отримувати поточний час треку.
 
-> 📦 **Початковий проект:** Заготовку проекту (базовий UI без прив'язки служби) ви знайдете у репозиторії: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`boundservice`**).\
+> 📦 **Початковий проект:** Заготовку проекту (базовий UI без прив'язки служби) ви знайдете у репозиторії: [krenevych/Compose](https://github.com/krenevych/Compose) (гілка **`main`**, модуль **`boundservice`**).<br>
 > 💡 **Приклад розв'язку:** Готовий завершений код гібридної `Bound Service` (з `LocalBinder` та `StateFlow`) знаходиться на гілці **`boundservice_end`** (модуль **`boundservice`**).
 
 ### 🔄 Специфічний життєвий цикл Bound Service

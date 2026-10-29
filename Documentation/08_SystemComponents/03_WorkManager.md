@@ -6,6 +6,9 @@
 
 Для цього Google створив бібліотеку **`WorkManager`**.
 
+> 📦 **Початковий проект:** Заготовку проекту для роботи з WorkManager (базовий Compose UI) ви знайдете у репозиторії: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`workmanager`**).\
+> 💡 **Приклад розв'язку:** Готовий завершений код із реалізованими `OneTimeWorkRequest` та `PeriodicWorkRequest` знаходиться на гілці **`workmanager_end`** (модуль **`workmanager`**).
+
 ---
 
 ## 1. Що таке WorkManager?
