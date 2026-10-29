@@ -77,6 +77,16 @@ sharedPref.edit {
 2. **Безпека типів (Type Safety):** Використовуються строгі ключі з чітко заданим типом.
 3. **Реактивність (Flow):** Зчитані дані повертаються у вигляді `Flow`. Це означає, що як тільки значення зміниться на диску, ваш UI (Compose) автоматично перемалюється з новими даними без жодних колбеків!
 
+> 💡 **Де фізично зберігається DataStore?**
+> Як і `SharedPreferences`, файли `DataStore` зберігаються у внутрішній закритій пам'яті вашого додатка, але в іншій папці та з іншим форматом.
+> Шлях: `/data/data/<пакет_вашого_додатка>/files/datastore/app_settings.preferences_pb`
+> Зверніть увагу: DataStore зберігає дані не у звичайному XML, а у спеціальному бінарному форматі Protocol Buffers (`.preferences_pb`), що робить його ще швидшим і надійнішим!
+>
+> 🛠️ **Як переглянути ці дані під час розробки?**
+> Оскільки це бінарний формат, ви **не зможете** просто відкрити і прочитати його як звичайний текст в *Device File Explorer* або вбудованих інспекторах Android Studio. Якщо ви завантажите цей файл, ви побачите "кракозябри", серед яких можна буде розгледіти лише строкові ключі. 
+> 
+> Тому єдиний ефективний спосіб перевірити, що збережено в `DataStore` під час розробки — це **логування вичитування у вашому `Repository` або `ViewModel`** (наприклад, поставивши `Log.d` всередині `collect` або `map`).
+
 ---
 
 ## 3. Як працювати з Preferences DataStore
@@ -92,8 +102,8 @@ implementation("androidx.datastore:datastore-preferences:1.0.0")
 
 ```kotlin
 object PreferencesKeys {
-    val USER_NAME = stringPreferencesKey("user_name")
-    val IS_DARK_MODE = booleanPreferencesKey("is_dark_mode")
+    val USER_NAME = stringPreferencesKey("key_username")
+    val HAS_NOTIFICATIONS = booleanPreferencesKey("key_notifications")
 }
 ```
 
@@ -101,7 +111,7 @@ object PreferencesKeys {
 Найкраща практика — створити `DataStore` один раз як розширення (Extension) для `Context` на самому верхньому рівні файлу (поза межами класів). Це зробить його єдиним (Singleton) для всього додатка.
 
 ```kotlin
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 ```
 
 ### Крок 4. Клас-Репозиторій для роботи з даними
@@ -117,9 +127,9 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.USER_NAME] ?: "Гість"
         }
 
-    val isDarkModeFlow: Flow<Boolean> = context.dataStore.data
+    val hasNotificationsFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.IS_DARK_MODE] ?: false
+            preferences[PreferencesKeys.HAS_NOTIFICATIONS] ?: false
         }
 
     // 2. ЗАПИС ДАНИХ (Асинхронна suspend функція)
@@ -129,9 +139,9 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    suspend fun toggleDarkMode(isDark: Boolean) {
+    suspend fun toggleNotifications(isEnabled: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.IS_DARK_MODE] = isDark
+            preferences[PreferencesKeys.HAS_NOTIFICATIONS] = isEnabled
         }
     }
 }
@@ -153,7 +163,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val userName: StateFlow<String> = repository.userNameFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Гість")
 
-    val isDarkMode: StateFlow<Boolean> = repository.isDarkModeFlow
+    val hasNotifications: StateFlow<Boolean> = repository.hasNotificationsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Метод для виклику з UI
@@ -171,11 +181,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 fun SettingsScreen(viewModel: SettingsViewModel) {
     // Підписуємося на стан із DataStore
     val userName by viewModel.userName.collectAsStateWithLifecycle()
-    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val hasNotifications by viewModel.hasNotifications.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Поточний користувач: $userName")
-        Text("Темна тема: ${if (isDarkMode) "Увімкнено" else "Вимкнено"}")
+        Text("Сповіщення: ${if (hasNotifications) "Увімкнено" else "Вимкнено"}")
 
         Spacer(modifier = Modifier.height(16.dp))
 
