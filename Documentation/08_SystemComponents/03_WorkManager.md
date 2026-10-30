@@ -6,7 +6,7 @@
 
 Для цього Google створив бібліотеку **`WorkManager`**.
 
-> 📦 **Початковий проект:** Заготовку проекту для роботи з WorkManager (базовий Compose UI) ви знайдете у репозиторії: [krenevych/Concurrency](https://github.com/krenevych/Concurrency) (гілка **`main`**, модуль **`workmanager`**).\
+> 📦 **Початковий проект:** Заготовку проекту для роботи з WorkManager (базовий Compose UI) ви знайдете у репозиторії: [krenevych/Compose](https://github.com/krenevych/Compose) (гілка **`main`**, модуль **`workmanager`**).\
 > 💡 **Приклад розв'язку:** Готовий завершений код із реалізованими `OneTimeWorkRequest` та `PeriodicWorkRequest` знаходиться на гілці **`workmanager_end`** (модуль **`workmanager`**).
 
 ---
@@ -66,6 +66,11 @@ class SyncWorker(
 }
 ```
 
+> 💡 **Що таке `WorkerParameters`?**
+> Клас `CoroutineWorker` завжди вимагає два аргументи: `Context` та `WorkerParameters`. 
+> `WorkerParameters` — це системний об'єкт, який передає у ваш воркер усю важливу мета-інформацію про поточну задачу. 
+> Зокрема, саме через нього ви можете отримати унікальний ідентифікатор задачі (`id`), поточний лічильник спроб виконання (`runAttemptCount`) та вхідні дані, які ви передали під час налаштування задачі (`inputData`).
+
 ### Крок 3. Запуск задачі з Умовами (`Constraints`)
 
 Ви можете запустити задачу лише один раз (`OneTimeWorkRequest`) або повторювати її періодично (`PeriodicWorkRequest`):
@@ -83,6 +88,7 @@ val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
     .build()
 
 // 3. Ставимо задачу у системну чергу WorkManager
+// Звичайний запуск (може призвести до дублікатів, якщо клікнути кілька разів)
 WorkManager.getInstance(context).enqueue(syncRequest)
 ```
 
@@ -99,6 +105,30 @@ WorkManager.getInstance(context).enqueue(syncRequest)
 | **`setRequiresBatteryNotLow`** | `true` — задача не запуститься, якщо телефон перебуває у режимі критично низького заряду (Low Battery). |
 | **`setRequiresDeviceIdle`** | `true` — задача запуститься тільки коли телефон лежить на столі без активного використання (спить). (Доступно з API 23). |
 | **`setRequiresStorageNotLow`** | `true` — задача не запуститься, якщо на пристрої критично мало вільного місця. |
+
+---
+
+### Крок 4. Унікальний запуск (`enqueueUniqueWork`)
+
+Якщо ви використовуєте звичайний метод `enqueue()`, то при кожному натисканні на кнопку в `Activity` створюватиметься нова копія задачі. Щоб запобігти накопиченню однакових задач у фоні, використовують метод **`enqueueUniqueWork`**. 
+
+Він дозволяє задати ім'я задачі та вибрати політику вирішення конфліктів (`ExistingWorkPolicy`), якщо задача з таким іменем вже існує:
+
+```kotlin
+WorkManager.getInstance(context).enqueueUniqueWork(
+    "one_time_sync",              // Унікальне ім'я задачі
+    ExistingWorkPolicy.REPLACE,   // Якщо задача вже є — скасувати її і запустити нову
+    syncRequest
+)
+```
+
+#### Політики вирішення конфліктів (`ExistingWorkPolicy`):
+| Політика | Поведінка системи, якщо задача з іменем "one_time_sync" вже існує |
+| :--- | :--- |
+| **`KEEP`** | Ігнорує новий запит. Дозволяє старій задачі продовжувати працювати (або чекати умов). |
+| **`REPLACE`** | Зупиняє і видаляє стару задачу, замінюючи її на нову. Дуже зручно, якщо змінилися параметри `Constraints` або вхідні дані. |
+| **`APPEND`** | Додає нову задачу в кінець ланцюжка (задача почнеться тільки після того, як успішно завершиться попередня). |
+| **`UPDATE`** | (Лише для `PeriodicWorkRequest`) М'яко оновлює налаштування поточної задачі, не перериваючи її поточного виконання. |
 
 ---
 
@@ -176,31 +206,56 @@ override suspend fun doWork(): Result {
 }
 ```
 
-### 2. Відстеження статусу та отримання результату (Output Data)
-Оскільки WorkManager працює у фоні, вашому UI (екрану чи `ViewModel`) потрібно якось дізнаватися, що відбувається із задачею. Ви можете **підписатися на системний об'єкт `WorkInfo`**, який містить поточний стан задачі (`State`) та передані результати виконання (`outputData`).
+### 2. Отримання проміжного прогресу (`setProgress`)
+Іноді задача виконується довго (наприклад, завантаження великого файлу), і вам потрібно показувати `ProgressBar` на екрані, не чекаючи фінального `Result.success()`. 
+
+Для цього всередині `doWork()` ви можете викликати метод **`setProgress()`**, передавши йому об'єкт `Data`:
+
+```kotlin
+override suspend fun doWork(): Result {
+    val totalSize = 100
+    for (i in 1..100) {
+        delay(100) // Імітація довгого завантаження
+        
+        // Передаємо проміжний прогрес у Activity
+        val progressData = Data.Builder().putInt("progress", i).build()
+        setProgress(progressData)
+    }
+    return Result.success()
+}
+```
+
+### 3. Відстеження статусу та отримання результату (Output Data)
+Оскільки WorkManager працює у фоні, вашому UI (екрану чи `ViewModel`) потрібно якось дізнаватися, що відбувається із задачею. Ви можете **підписатися на системний об'єкт `WorkInfo`**, який містить поточний стан задачі (`State`), поточний прогрес (`progress`) та фінальні результати (`outputData`).
 
 Щоб відстежувати цей `WorkInfo` в реальному часі, використовуйте метод `getWorkInfoByIdLiveData(...)`:
 
 ```kotlin
-// 1. У класі SyncWorker повертаємо результат після успішного виконання:
-val outputData = Data.Builder().putString("status", "Успішно завантажено!").build()
-return Result.success(outputData)
-
-
-// 2. В Activity (або ViewModel) підписуємося на зміни статусу задачі:
+// В Activity (або ViewModel) підписуємося на зміни статусу задачі:
 WorkManager.getInstance(context)
     .getWorkInfoByIdLiveData(syncRequest.id) // Підписка за унікальним ID задачі
     .observe(this) { workInfo ->
-        // Перевіряємо, чи задача успішно закінчилася
-        if (workInfo != null && workInfo.state == WorkInfo.State.SUCCEEDED) {
-            // Тільки у стані SUCCEEDED ми можемо витягнути фінальний результат!
-            val message = workInfo.outputData.getString("status")
-            Log.d("App", "Готово: $message")
+        
+        if (workInfo != null) {
+            when (workInfo.state) {
+                WorkInfo.State.RUNNING -> {
+                    // Зчитуємо ПРОМІЖНИЙ ПРОГРЕС, поки задача ще працює!
+                    val progress = workInfo.progress.getInt("progress", 0)
+                    Log.d("App", "Поточний прогрес: $progress%")
+                }
+                WorkInfo.State.SUCCEEDED -> {
+                    // Тільки у стані SUCCEEDED ми можемо витягнути ФІНАЛЬНИЙ результат (outputData)!
+                    val message = workInfo.outputData.getString("status")
+                    Log.d("App", "Готово: $message")
+                }
+                WorkInfo.State.FAILED -> Log.e("App", "Задача впала з помилкою (і не має retry)!")
+                else -> {}
+            }
         }
     }
 ```
 
-### 3. Життєвий цикл задачі (`WorkInfo.State`)
+### 4. Життєвий цикл задачі (`WorkInfo.State`)
 
 Коли ви викликаєте `enqueue()`, задача не виконується миттєво. Вона проходить такий життєвий цикл станів (`State`):
 
