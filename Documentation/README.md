@@ -45,3 +45,4 @@
 
 ## 09. Робота з даними (Data & Networking)
 * [Локальні налаштування: SharedPreferences та DataStore (`01_Preferences.md`)](09_Data/01_Preferences.md) — недоліки застарілого `SharedPreferences`, переваги `Preferences DataStore`, створення строго типізованих ключів, читання даних через `Flow`, асинхронний запис через `edit {}` та магічна реактивна інтеграція з `ViewModel` і Compose.
+* [Робота з мережею: Retrofit та OkHttp (`02_Retrofit.md`)](09_Data/02_Retrofit.md) — архітектура мережевого стеку, дозволи `INTERNET`, `Kotlinx Serialization`, інтерфейси `@GET`/`@Path`, логування через `OkHttpClient`, використання `suspend` функцій та обробка станів екрану (`Sealed Interface: Loading, Success, Error`) у `ViewModel`.
