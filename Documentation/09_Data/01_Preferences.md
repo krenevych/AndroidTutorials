@@ -149,9 +149,100 @@ class SettingsRepository(private val context: Context) {
 
 ---
 
-## 4. Інтеграція DataStore із ViewModel та Jetpack Compose
+## 4. Одноразове (Синхронне) зчитування даних з DataStore
 
-Тепер ми можемо елегантно прив'язати наш репозиторій до UI. ViewModel зчитає холодний `Flow` із DataStore і перетворить його у гарячий `StateFlow`, а Compose автоматично відреагує на нього.
+Хоча DataStore створений бути реактивним потоком (`Flow`), іноді вам потрібно просто "одноразово зчитати" значення в даний момент часу (наприклад, перевірити токен авторизації перед мережевим запитом або під час ініціалізації сторонньої бібліотеки), і вам не потрібно підписуватися на постійні оновлення.
+
+Оскільки `Flow` виконується асинхронно, для отримання одного значення ми повинні використати корутину та оператор **`first()`** або **`firstOrNull()`** (цей оператор чекає на перше згенероване значення з потоку і одразу відписується).
+
+#### Додаємо метод одноразового зчитування у `SettingsRepository`:
+```kotlin
+class SettingsRepository(private val context: Context) {
+    // ...
+
+    // Повертає одне значення замість Flow
+    suspend fun getUserNameOnce(): String {
+        val preferences = context.dataStore.data.first()
+        return preferences[PreferencesKeys.USER_NAME] ?: "Гість"
+    }
+}
+```
+
+#### Виклик з Activity (без Compose / без підписки):
+```kotlin
+// Наприклад, нам потрібно одноразово прочитати ім'я по кліку на кнопку
+button.setOnClickListener {
+    lifecycleScope.launch {
+        val name = settingsRepository.getUserNameOnce()
+        Log.d("App", "Зчитане ім'я: $name")
+    }
+}
+```
+
+> ⚠️ **Важливо:** Ніколи не використовуйте `runBlocking { dataStore.data.first() }` на Головному потоці, оскільки це заблокує UI доти, поки файл не буде прочитано з диска! Завжди використовуйте `suspend` та `lifecycleScope.launch` / `viewModelScope.launch`.
+
+---
+
+## 5. Безпосередня інтеграція DataStore у Compose UI (Без ViewModel)
+
+Для простих екранів (наприклад, екран Налаштувань) іноді недоцільно створювати цілу `ViewModel`. Ви можете підписатися на холодні потоки DataStore прямо всередині Composable-функції, створивши екземпляр Репозиторію за допомогою `LocalContext.current`.
+
+```kotlin
+@Composable
+fun SettingsScreen(
+    modifier: Modifier = Modifier,
+    // 1. Отримуємо контекст та створюємо репозиторій прямо у параметрах за замовчуванням
+    repository: SettingsRepository = SettingsRepository(LocalContext.current)
+) {
+    // 2. Створюємо scope для запуску suspend функцій по кліку на кнопку
+    val coroutineScope = rememberCoroutineScope()
+
+    // 3. Підписуємося на холодні потоки DataStore напряму!
+    // Оскільки Flow холодний, обов'язково передаємо initialValue!
+    val savedUsername by repository.userNameFlow.collectAsStateWithLifecycle(initialValue = "")
+    val savedNotifications by repository.hasNotificationsFlow.collectAsState(initial = false)
+
+    // 4. Локальний стан екрану, який оновлюється при надходженні даних з DataStore
+    var username by remember(savedUsername) { mutableStateOf(savedUsername) }
+    var notificationsEnabled by remember(savedNotifications) { mutableStateOf(savedNotifications) }
+
+    Column(modifier = modifier.padding(16.dp)) {
+        // Поле вводу
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Ім'я користувача") }
+        )
+
+        // Перемикач
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Сповіщення")
+            Switch(
+                checked = notificationsEnabled,
+                onCheckedChange = { notificationsEnabled = it }
+            )
+        }
+
+        // Кнопка збереження (запускаємо корутину для запису в DataStore)
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    repository.saveUserName(username)
+                    repository.toggleNotifications(notificationsEnabled)
+                }
+            }
+        ) {
+            Text("Зберегти налаштування")
+        }
+    }
+}
+```
+
+---
+
+## 6. Інтеграція DataStore із ViewModel та Jetpack Compose
+
+Якщо ваш екран має багато бізнес-логіки або ці дані потрібні іншим частинам додатку, краще дотримуватися класичної архітектури. ViewModel зчитає холодний `Flow` із DataStore і перетворить його у гарячий `StateFlow`, а Compose автоматично відреагує на нього.
 
 ### ViewModel:
 ```kotlin
