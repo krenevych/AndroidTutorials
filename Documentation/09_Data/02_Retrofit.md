@@ -71,20 +71,7 @@ suspend fun fetchUrlNaively() {
 
 ---
 
-## 3. Сучасна архітектура: Retrofit + OkHttp
-
-Щоб розв'язати проблему ручного мережевого запиту (описаного в Розділі 1) та необхідності вручну парсити JSON, Android-розробники використовують золотий стандарт — потужну зв'язку бібліотек:
-
-1. **Retrofit:** Це зручна "обгортка" (від компанії Square). Ви просто створюєте Kotlin-інтерфейс і позначаєте його методи спеціальними анотаціями (наприклад, `@GET("users")`). Retrofit сам генерує весь необхідний код під капотом для здійснення реального запиту.
-2. **OkHttp:** Це потужний "двигун" під капотом Retrofit, який безпосередньо виконує HTTP-запити. Саме він керує з'єднаннями, таймаутами та логуванням.
-3. **Конвертер (Kotlinx Serialization / Gson):** Це плагін для Retrofit, який бере на себе автоматичне перетворення сирого тексту JSON, що прийшов із сервера, у готові зручні Kotlin Data-класи (POJO об'єкти), з якими ви працюєте в коді.
-
-> ⚠️ **Критичне правило (NetworkOnMainThreadException):** 
-> Операційна система Android суворо **забороняє** робити будь-які мережеві запити у Головному потоці (Main Thread). Якщо ви спробуєте викликати нативний `url.readText()` без `Dispatchers.IO`, додаток миттєво впаде з помилкою. На щастя, Retrofit має вбудовану підтримку `suspend` функцій і автоматично виконує всі свої запити у безпечному фоновому потоці!
-
----
-
-## 4. Формат JSON та Моделі даних (POJO)
+## 3. Формат JSON та Моделі даних (POJO)
 
 Як ми вже зазначали, 99% сучасних API повертають дані у форматі **JSON (JavaScript Object Notation)**. Це простий, легкий і зрозумілий як для людини, так і для машини формат обміну даними, який повністю витіснив застарілий XML у веб-розробці.
 
@@ -171,19 +158,61 @@ data class UserProfile(
 
 ---
 
-## 4. Крок 1: Дозволи та Залежності
+## 4. Сучасна архітектура: Retrofit + OkHttp
 
-### Дозвіл на Інтернет (Маніфест)
+Щоб розв'язати проблему ручного мережевого запиту (описаного в Розділі 1) та необхідності вручну парсити JSON, Android-розробники використовують золотий стандарт — потужну зв'язку бібліотек:
+
+1. **Retrofit:** Це зручна "обгортка" (від компанії Square). Ви просто створюєте Kotlin-інтерфейс і позначаєте його методи спеціальними анотаціями (наприклад, `@GET("users")`). Retrofit сам генерує весь необхідний код під капотом для здійснення реального запиту.
+2. **OkHttp:** Це потужний "двигун" під капотом Retrofit, який безпосередньо виконує HTTP-запити. Саме він керує з'єднаннями, таймаутами та логуванням.
+3. **Конвертер (Kotlinx Serialization / Gson):** Це плагін для Retrofit, який бере на себе автоматичне перетворення сирого тексту JSON, що прийшов із сервера, у готові зручні Kotlin Data-класи (POJO об'єкти), з якими ви працюєте в коді.
+
+Першоджерела для вивчення Retrofit:
+
+* **[Офіційна документація Retrofit](https://lysine.dev/retrofit/)** — опис анотацій, налаштування та приклади використання.
+* **[Репозиторій Retrofit на GitHub](https://github.com/lysine-dev/retrofit)** — вихідний код, README та історія змін.
+
+> ⚠️ **Критичне правило (NetworkOnMainThreadException):**
+> Операційна система Android суворо **забороняє** робити будь-які мережеві запити у Головному потоці (Main Thread). Якщо ви спробуєте викликати нативний `url.readText()` без `Dispatchers.IO`, додаток миттєво впаде з помилкою. На щастя, Retrofit має вбудовану підтримку `suspend` функцій і автоматично виконує всі свої запити у безпечному фоновому потоці!
+
+---
+
+## 5. Практичний приклад: завантаження користувачів з API
+
+Створимо екран, який завантажує користувачів із JSONPlaceholder та відображає їх у Compose. Пройдемо всі кроки: від дозволу на Інтернет і залежностей до обробки станів завантаження, успіху та помилки.
+
+### 5.1. Дозволи та залежності
+
+#### Дозвіл на Інтернет (Маніфест)
 Перше, про що забувають 90% початківців — це дозвіл на вихід в Інтернет. Відкрийте `AndroidManifest.xml` і додайте цей рядок над тегом `<application>`:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 ```
 
-### Залежності (Gradle)
-Додайте необхідні бібліотеки у файл `build.gradle.kts` вашого модуля:
+#### Залежності (Gradle)
+Для `kotlinx.serialization` потрібні **плагін компілятора** та **бібліотека JSON**. Плагін генерує серіалізатори для класів з `@Serializable`, а бібліотека читає та записує JSON під час роботи застосунку.
+
+Спочатку оголосіть плагін у кореневому `build.gradle.kts`. **Його версія має збігатися з версією Kotlin у вашому проєкті.** Наприклад, якщо проєкт використовує Kotlin `2.0.21`:
 
 ```kotlin
+// build.gradle.kts (корінь проєкту)
+plugins {
+    // Інші плагіни проєкту залишаються тут
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21" apply false
+}
+```
+
+`2.0.21` тут — приклад узгодження версій, а не вимога змінити Kotlin у вашому проєкті. Якщо плагіни описані через Version Catalog (`libs.versions.toml`), додайте цей плагін до каталогу з посиланням на ту саму версію Kotlin та застосуйте його через alias; повторне оголошення не потрібне.
+
+Далі застосуйте плагін та додайте бібліотеки у `app/build.gradle.kts`. Доповніть наявні блоки `plugins` і `dependencies`:
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    // Наявні Android / Kotlin / Compose плагіни
+    id("org.jetbrains.kotlin.plugin.serialization")
+}
+
 dependencies {
     // 1. Retrofit (Головна бібліотека)
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
@@ -194,13 +223,22 @@ dependencies {
     
     // 3. OkHttp Logging Interceptor (Для перегляду логів запитів у Logcat)
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // 4. Lifecycle для прикладу ViewModel та Compose нижче
+    val lifecycleVersion = "2.8.7"
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion")
 }
 ```
-*(Для `kotlinx-serialization` також необхідно підключити однойменний плагін у блоці `plugins {}` нагорі файлу).*
+
+`lifecycle-viewmodel-ktx` надає `viewModelScope`, `lifecycle-viewmodel-compose` — функцію `viewModel()` для Compose, а `lifecycle-runtime-compose` — `collectAsStateWithLifecycle()`. Приклад передбачає, що Compose та Material 3 вже налаштовані у проєкті.
+
+Версії бібліотек вище наведені для прикладу й не позначають найновіші релізи. Версія бібліотеки `kotlinx-serialization-json` має власну нумерацію та не зобов'язана збігатися з версією Kotlin або плагіна серіалізації. Після змін виконайте **Sync Project with Gradle Files** в Android Studio.
 
 ---
 
-## 6. Крок 2: Створення Data-класів для API
+### 5.2. Створення Data-класів для API
 
 Припустимо, ми звертаємося до API `https://jsonplaceholder.typicode.com/users`, яке повертає масив користувачів у форматі JSON:
 ```json
@@ -231,7 +269,7 @@ data class User(
 
 ---
 
-## 5. Крок 2: Опис API Інтерфейсу
+### 5.3. Опис API Інтерфейсу
 
 Далі ми маємо описати наші мережеві запити. Ми створюємо звичайний інтерфейс і використовуємо анотації Retrofit:
 
@@ -262,7 +300,7 @@ interface ApiService {
 
 ---
 
-## 6. Крок 3: Ініціалізація Retrofit
+### 5.4. Ініціалізація Retrofit
 
 Тепер нам потрібно створити екземпляр Retrofit та прив'язати його до нашого інтерфейсу. Зазвичай це роблять у синглтоні (через `object` або за допомогою Hilt/Dagger).
 
@@ -305,11 +343,11 @@ object NetworkModule {
 
 ---
 
-## 7. Крок 4: Виклик у ViewModel та відображення у Compose
+### 5.5. Виклик у ViewModel та відображення у Compose
 
 Найкращий патерн для обробки мережевих запитів — це створення Sealed-класу (або інтерфейсу) для відображення стану екрану (Завантаження ➔ Успіх / Помилка).
 
-### 1. State (Стан):
+#### 1. State (Стан):
 ```kotlin
 sealed interface UsersUiState {
     object Loading : UsersUiState
@@ -318,7 +356,7 @@ sealed interface UsersUiState {
 }
 ```
 
-### 2. ViewModel:
+#### 2. ViewModel:
 ```kotlin
 class UsersViewModel : ViewModel() {
 
@@ -347,7 +385,7 @@ class UsersViewModel : ViewModel() {
 }
 ```
 
-### 3. Compose UI:
+#### 3. Compose UI:
 ```kotlin
 @Composable
 fun UsersScreen(viewModel: UsersViewModel) {
