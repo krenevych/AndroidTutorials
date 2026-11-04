@@ -102,7 +102,7 @@ JSON складається з базових структур, які дуже 
    * **Масив (`[ ... ]`):** Позначається квадратними дужками. Це впорядкований список будь-яких вищезгаданих значень (наприклад, масив рядків `"roles": ["admin", "editor"]` або масив об'єктів). У Kotlin він перетворюється на `List<T>`.
 
 ### Перетворення JSON у Kotlin: Data-класи (POJO)
-Щоб працювати з JSON у Kotlin, ми повинні перетворити текст на повноцінні програмні об'єкти. Для цього використовується концепція **POJO (Plain Old Java Object)**, яка у світі Kotlin реалізується через **Data-класи**. Поля цього класу повинні в точності відповідати ключам у JSON.
+Щоб працювати з JSON у Kotlin, ми повинні перетворити текст на повноцінні програмні об'єкти. Для цього використовується концепція **POJO (Plain Old Java Object)**, яка у світі Kotlin реалізується через **Data-класи**. Назви властивостей зіставляються з ключами JSON; якщо вони відрізняються, можна вказати відповідність анотацією.
 
 > Нагадаємо, **Data-клас** — це спеціальний клас, єдиною метою якого, як правило, є зберігання даних (він не містить складної бізнес-логіки). 
 
@@ -118,25 +118,23 @@ JSON складається з базових структур, які дуже 
 
 Відповідний Kotlin POJO (Data-клас) для цього JSON виглядатиме так:
 ```kotlin
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
+import com.google.gson.annotations.SerializedName
 
-@Serializable
 data class UserProfile(
     val id: Int,
     
-    @SerialName("first_name")
+    @SerializedName("first_name")
     val firstName: String,
     
-    @SerialName("is_active")
+    @SerializedName("is_active")
     val isActive: Boolean
 )
 ```
 
 **Що тут відбувається:**
-1. **Анотація `@Serializable`:** Обов'язково ставиться перед оголошенням класу. Вона слугує маркером для плагіна компілятора `kotlinx.serialization`, який на етапі збірки проекту згенерує весь необхідний код для автоматичного парсингу цього класу з JSON і навпаки.
-2. **Анотація `@SerialName`:** У бекенд-розробці для форматів JSON часто використовують зміїний регістр (snake_case), де слова розділяються підкресленнями (наприклад, `"first_name"`). Однак у Kotlin прийнято використовувати верблюжий регістр (CamelCase) для імен змінних (`firstName`). Анотація `@SerialName("first_name")` об'єднує ці два світи. Вона каже конвертеру: *"Коли шукаєш дані в JSON, шукай ключ `first_name`, але у коді Kotlin поклади це значення у змінну `firstName`"*.
-3. Якщо ключ у JSON і назва вашої змінної у Kotlin **повністю збігаються** (як у випадку зі змінною `id`), використовувати анотацію `@SerialName` не потрібно — бібліотека зіставить їх автоматично!
+1. **Gson** перетворює JSON на об'єкти цього класу під час роботи застосунку. Для цього не потрібен окремий плагін компілятора чи анотація перед класом.
+2. **Анотація `@SerializedName`:** У JSON часто використовують snake_case (`"first_name"`), а для властивостей Kotlin — lowerCamelCase (`firstName`). `@SerializedName("first_name")` указує Gson, який ключ JSON відповідає властивості `firstName`.
+3. Якщо ключ JSON і назва властивості Kotlin **збігаються** (як у випадку з `id`), анотація `@SerializedName` не потрібна — Gson зіставить їх автоматично.
 
 ### Корисні інструменти для роботи з JSON та POJO:
 Під час розробки вам доведеться часто дивитися на "сирі" відповіді від сервера і конвертувати їх у код. Щоб пришвидшити цей процес, розробники використовують спеціальні інструменти:
@@ -164,7 +162,7 @@ data class UserProfile(
 
 1. **Retrofit:** Це зручна "обгортка" (від компанії Square). Ви просто створюєте Kotlin-інтерфейс і позначаєте його методи спеціальними анотаціями (наприклад, `@GET("users")`). Retrofit сам генерує весь необхідний код під капотом для здійснення реального запиту.
 2. **OkHttp:** Це потужний "двигун" під капотом Retrofit, який безпосередньо виконує HTTP-запити. Саме він керує з'єднаннями, таймаутами та логуванням.
-3. **Конвертер (Kotlinx Serialization / Gson):** Це плагін для Retrofit, який бере на себе автоматичне перетворення сирого тексту JSON, що прийшов із сервера, у готові зручні Kotlin Data-класи (POJO об'єкти), з якими ви працюєте в коді.
+3. **Конвертер Gson:** Це бібліотека, яку підключаємо до Retrofit для автоматичного перетворення JSON із сервера на Kotlin Data-класи (POJO об'єкти), з якими працюємо в коді.
 
 Першоджерела для вивчення Retrofit:
 
@@ -176,236 +174,294 @@ data class UserProfile(
 
 ---
 
-## 5. Практичний приклад: завантаження користувачів з API
+## 5. Практичний приклад: поточні курси валют ПриватБанку
 
-Створимо екран, який завантажує користувачів із JSONPlaceholder та відображає їх у Compose. Пройдемо всі кроки: від дозволу на Інтернет і залежностей до обробки станів завантаження, успіху та помилки.
+Створимо екран, який завантажує поточні **готівкові курси валют ПриватБанку** до гривні та відображає купівлю й продаж у Compose. Запит виконуватиметься при створенні ViewModel та після натискання кнопки оновлення. Пройдемо всі кроки: від дозволу на Інтернет і залежностей до обробки станів завантаження, успіху та помилки.
+
+* **[Документація API ПриватБанку](https://api.privatbank.ua/#/p24/exchange)** — опис запиту та полів відповіді.
+* **[Поточний готівковий курс у JSON](https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5)** — адреса, яку можна відкрити у браузері для перевірки відповіді. Для цього публічного запиту не потрібні API-ключ чи авторизація.
+
+Параметр `coursid=5` обирає готівковий курс, а `coursid=11` — безготівковий (для конвертації за картками та в Приват24). У нашому прикладі використовуватимемо `5`.
 
 ### 5.1. Дозволи та залежності
 
 #### Дозвіл на Інтернет (Маніфест)
-Перше, про що забувають 90% початківців — це дозвіл на вихід в Інтернет. Відкрийте `AndroidManifest.xml` і додайте цей рядок над тегом `<application>`:
+Відкрийте `AndroidManifest.xml` і додайте дозвіл на вихід в Інтернет над тегом `<application>`:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 ```
 
 #### Залежності (Gradle)
-Для `kotlinx.serialization` потрібні **плагін компілятора** та **бібліотека JSON**. Плагін генерує серіалізатори для класів з `@Serializable`, а бібліотека читає та записує JSON під час роботи застосунку.
 
-Спочатку оголосіть плагін у кореневому `build.gradle.kts`. **Його версія має збігатися з версією Kotlin у вашому проєкті.** Наприклад, якщо проєкт використовує Kotlin `2.0.21`:
-
-```kotlin
-// build.gradle.kts (корінь проєкту)
-plugins {
-    // Інші плагіни проєкту залишаються тут
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21" apply false
-}
-```
-
-`2.0.21` тут — приклад узгодження версій, а не вимога змінити Kotlin у вашому проєкті. Якщо плагіни описані через Version Catalog (`libs.versions.toml`), додайте цей плагін до каталогу з посиланням на ту саму версію Kotlin та застосуйте його через alias; повторне оголошення не потрібне.
-
-Далі застосуйте плагін та додайте бібліотеки у `app/build.gradle.kts`. Доповніть наявні блоки `plugins` і `dependencies`:
+Для роботи з API додайте дві залежності у `app/build.gradle.kts`:
 
 ```kotlin
-// app/build.gradle.kts
-plugins {
-    // Наявні Android / Kotlin / Compose плагіни
-    id("org.jetbrains.kotlin.plugin.serialization")
-}
-
 dependencies {
-    // 1. Retrofit (Головна бібліотека)
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    
-    // 2. Конвертер JSON (на базі Kotlinx Serialization)
-    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:2.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    
-    // 3. OkHttp Logging Interceptor (Для перегляду логів запитів у Logcat)
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-    // 4. Lifecycle для прикладу ViewModel та Compose нижче
-    val lifecycleVersion = "2.8.7"
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
 }
 ```
 
-`lifecycle-viewmodel-ktx` надає `viewModelScope`, `lifecycle-viewmodel-compose` — функцію `viewModel()` для Compose, а `lifecycle-runtime-compose` — `collectAsStateWithLifecycle()`. Приклад передбачає, що Compose та Material 3 вже налаштовані у проєкті.
+Перша підключає Retrofit, друга — конвертер Gson для перетворення JSON на Kotlin-об'єкти. OkHttp та Gson підтягнуться автоматично як транзитивні залежності. Додаткові Gradle-плагіни для цього не потрібні.
 
-Версії бібліотек вище наведені для прикладу й не позначають найновіші релізи. Версія бібліотеки `kotlinx-serialization-json` має власну нумерацію та не зобов'язана збігатися з версією Kotlin або плагіна серіалізації. Після змін виконайте **Sync Project with Gradle Files** в Android Studio.
+Виконайте **Sync Project with Gradle Files**. Далі вважаємо, що Compose, Material 3 та Lifecycle для ViewModel і `collectAsStateWithLifecycle()` вже налаштовані у проєкті. Стандартні імпорти Android, Compose та корутин у прикладах опущено — їх можна додати підказками Android Studio.
 
 ---
 
 ### 5.2. Створення Data-класів для API
 
-Припустимо, ми звертаємося до API `https://jsonplaceholder.typicode.com/users`, яке повертає масив користувачів у форматі JSON:
+API повертає **масив об'єктів**, кожен із яких містить курс однієї валюти. Приклад структури відповіді (значення курсів наведені для ілюстрації та змінюються з часом):
+
 ```json
-{
-  "id": 1,
-  "name": "Leanne Graham",
-  "email": "Sincere@april.biz"
-}
+[
+  {
+    "ccy": "EUR",
+    "base_ccy": "UAH",
+    "buy": "50.70000",
+    "sale": "51.70000"
+  },
+  {
+    "ccy": "USD",
+    "base_ccy": "UAH",
+    "buy": "45.50000",
+    "sale": "46.10000"
+  }
+]
 ```
 
-Створюємо відповідний Data-клас у Kotlin та позначаємо його анотацією **`@Serializable`**. Ця анотація — сигнал для бібліотеки `kotlinx.serialization`, що цей клас можна автоматично парсити з JSON.
+Зіставимо поля JSON із властивостями Kotlin:
+
+| Поле JSON | Властивість Kotlin | Значення |
+| --- | --- | --- |
+| `ccy` | `currency` | Код валюти, наприклад `USD` або `EUR` |
+| `base_ccy` | `baseCurrency` | Базова валюта — `UAH` |
+| `buy` | `buy` | Скільки гривень банк платить за купівлю однієї одиниці валюти |
+| `sale` | `sale` | Скільки гривень банк бере за продаж однієї одиниці валюти |
+
+**Купівля та продаж вказані з погляду банку:** якщо ви здаєте долари банку, застосовується `buy`; якщо купуєте долари в банку — `sale`.
+
+Створюємо файл `ExchangeRate.kt`. За допомогою `@SerializedName` зіставляємо назви полів API зі зрозумілими назвами властивостей Kotlin:
 
 ```kotlin
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
+import com.google.gson.annotations.SerializedName
 
-@Serializable
-data class User(
-    val id: Int,
-    val name: String,
-    
-    // Якщо ім'я ключа в JSON не збігається з бажаним ім'ям змінної у Kotlin, 
-    // використовуємо анотацію @SerialName, щоб підказати конвертеру правильний ключ:
-    @SerialName("email") 
-    val userEmail: String 
+data class ExchangeRate(
+    @SerializedName("ccy")
+    val currency: String,
+
+    @SerializedName("base_ccy")
+    val baseCurrency: String,
+
+    val buy: String,
+    val sale: String
 )
 ```
+
+Зверніть увагу: API передає `buy` і `sale` **як рядки в лапках**, тому у моделі це `String`. Для відображення збережемо значення як є. Якщо потрібно обчислювати суми, їх можна перетворити через `toBigDecimal()` і визначити правила округлення; `Double` для точних грошових розрахунків не підходить.
 
 ---
 
 ### 5.3. Опис API Інтерфейсу
 
-Далі ми маємо описати наші мережеві запити. Ми створюємо звичайний інтерфейс і використовуємо анотації Retrofit:
+#### Як влаштований GET-запит?
+
+**GET** — це HTTP-метод для отримання даних із сервера. У нашому випадку ми просимо банк повернути курси валют. Метод визначає дію, а URL — адресу ресурсу та параметри вибірки:
+
+```text
+GET https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5
+```
+
+Розберімо цю адресу на частини:
+
+| Частина URL | Що означає |
+| --- | --- |
+| `https://` | Схема з'єднання: HTTP із шифруванням TLS |
+| `api.privatbank.ua` | Домен сервера, до якого звертаємося |
+| `/p24api/pubinfo` | Шлях до ресурсу на сервері |
+| `?` | Початок параметрів запиту (query parameters) |
+| `json` | Параметр формату відповіді JSON у цьому API |
+| `exchange` | Параметр запиту курсів валют у цьому API |
+| `&` | Роздільник між параметрами |
+| `coursid=5` | Параметр `coursid` зі значенням `5`: готівковий курс |
+
+Параметри часто мають вигляд `ім'я=значення`. У цьому API `json` та `exchange` записані без `=значення` — як прапорці. Назви параметрів та їхнє значення визначає документація конкретного API: вони не є стандартними командами HTTP.
+
+**У нашого запиту немає тіла (Body):** усі параметри передаємо в URL після `?`. Заголовки — окрема частина HTTP-запиту. Наприклад, у спрощеному вигляді для HTTP/1.1 запит можна записати так:
+
+```http
+GET /p24api/pubinfo?json&exchange&coursid=5 HTTP/1.1
+Host: api.privatbank.ua
+Accept: application/json
+
+```
+
+Тут `Host` указує сервер, а `Accept` повідомляє, що клієнт очікує JSON. `Content-Type` описував би формат тіла, яке ми надсилаємо; у цьому GET-запиті тіла немає, тому цей заголовок не потрібен. Формат відповіді визначає сервер відповідно до свого API. Заголовок авторизації для цього публічного запиту також не потрібен.
+
+#### Як описати цей запит у Retrofit?
+
+Retrofit дозволяє описати запит через Kotlin-інтерфейс. Розділимо повну адресу на базову частину, шлях і параметри:
+
+```text
+Базова адреса:   https://api.privatbank.ua/p24api/
+Відносний шлях:  pubinfo
+Сталі параметри: json&exchange
+Змінний параметр: coursid=5
+```
+
+Базову адресу налаштуємо через `.baseUrl(...)` у підрозділі 5.4. Зараз створюємо файл `PrivatBankApi.kt`: у `@GET` записуємо шлях зі сталими параметрами, а через `@Query` передаємо змінний параметр `coursid`:
 
 ```kotlin
 import retrofit2.http.GET
-import retrofit2.http.Path
 import retrofit2.http.Query
 
-interface ApiService {
+interface PrivatBankApi {
 
-    // GET-запит до https://api.example.com/users
-    // Повертає список користувачів
-    @GET("users")
-    suspend fun getUsers(): List<User>
-
-    // Запит із динамічним шляхом (Path). 
-    // Якщо userId = 5, URL буде: https://api.example.com/users/5
-    @GET("users/{id}")
-    suspend fun getUserById(@Path("id") userId: Int): User
-
-    // Запит із параметрами пошуку (Query).
-    // URL буде: https://api.example.com/users?sort=desc
-    @GET("users")
-    suspend fun getSortedUsers(@Query("sort") sortOrder: String): List<User>
+    // GET https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5
+    @GET("pubinfo?json&exchange")
+    suspend fun getExchangeRates(
+        @Query("coursid") courseId: Int = 5
+    ): List<ExchangeRate>
 }
 ```
-> 💡 Зверніть увагу: ми використовуємо модифікатор **`suspend`**. Завдяки цьому ми зможемо викликати ці функції прямо з Корутин (`viewModelScope`), і Retrofit сам перенесе мережеву роботу на безпечний фоновий потік!
+
+* **`@GET("pubinfo?json&exchange")`** задає HTTP-метод, відносний шлях та сталі параметри запиту.
+* **`@Query("coursid")`** додає до URL параметр із серверною назвою `coursid`. Kotlin-параметр `courseId` може мати іншу назву; `= 5` задає його значення за замовчуванням.
+* **`List<ExchangeRate>`** описує очікуваний результат: конвертер перетворить масив `[...]` із JSON на список об'єктів Kotlin.
+
+Виклик `getExchangeRates()` сформує запит із `coursid=5`, а `getExchangeRates(courseId = 11)` — із `coursid=11`. Retrofit та OkHttp самі зберуть і відправлять HTTP-запит; вручну писати рядки `GET ... HTTP/1.1` та `Host` у Kotlin не потрібно. Заголовок `Accept` вище показаний для пояснення будови HTTP-запиту; наш приклад працює без його явного додавання.
+
+> 💡 Метод Retrofit з **`suspend`** можна викликати з `viewModelScope`: Retrofit виконує HTTP-запит асинхронно через OkHttp, тому тут не потрібен `withContext(Dispatchers.IO)`. Сам модифікатор `suspend` не перемикає потоки для довільного блокувального коду.
 
 ---
 
 ### 5.4. Ініціалізація Retrofit
 
-Тепер нам потрібно створити екземпляр Retrofit та прив'язати його до нашого інтерфейсу. Зазвичай це роблять у синглтоні (через `object` або за допомогою Hilt/Dagger).
+У файлі `NetworkModule.kt` створимо Retrofit із конвертером Gson та реалізацію `PrivatBankApi`. Для навчального прикладу використаємо `object`:
 
 ```kotlin
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
+import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
-    
-    private const val BASE_URL = "https://jsonplaceholder.typicode.com/"
 
-    // 1. Налаштовуємо OkHttp клієнт (додаємо логер, щоб бачити запити у Logcat)
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Логуємо ВСЕ (заголовки і тіло)
-    }
+    private const val BASE_URL = "https://api.privatbank.ua/p24api/"
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .build()
-
-    // 2. Налаштовуємо конвертер JSON
-    private val json = Json { ignoreUnknownKeys = true } // Ігноруємо зайві поля в JSON
-    private val contentType = "application/json".toMediaType()
-
-    // 3. Збираємо Retrofit
-    val retrofit: Retrofit = Retrofit.Builder()
+    private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
-        .client(client)
-        .addConverterFactory(json.asConverterFactory(contentType))
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    // 4. Створюємо реалізацію нашого інтерфейсу
-    val apiService: ApiService = retrofit.create(ApiService::class.java)
+    val privatBankApi: PrivatBankApi = retrofit.create(PrivatBankApi::class.java)
 }
 ```
+
+Базова адреса Retrofit має завершуватися `/`. Разом із шляхом `pubinfo` та параметрами вона утворює повний URL із попереднього підрозділу. `GsonConverterFactory.create()` підключає перетворення JSON на моделі даних. Retrofit створить OkHttp-клієнт автоматично.
 
 ---
 
 ### 5.5. Виклик у ViewModel та відображення у Compose
 
-Найкращий патерн для обробки мережевих запитів — це створення Sealed-класу (або інтерфейсу) для відображення стану екрану (Завантаження ➔ Успіх / Помилка).
+Опишемо стан екрана через sealed-інтерфейс: завантаження, успішно отримані курси або помилка. Кожен наступний блок розміщуємо в окремому Kotlin-файлі з відповідною назвою в тому самому пакеті, що й попередні класи прикладу.
 
 #### 1. State (Стан):
 ```kotlin
-sealed interface UsersUiState {
-    object Loading : UsersUiState
-    data class Success(val users: List<User>) : UsersUiState
-    data class Error(val message: String) : UsersUiState
+sealed interface ExchangeRatesUiState {
+    object Loading : ExchangeRatesUiState
+    data class Success(val rates: List<ExchangeRate>) : ExchangeRatesUiState
+    data class Error(val message: String) : ExchangeRatesUiState
 }
 ```
 
 #### 2. ViewModel:
 ```kotlin
-class UsersViewModel : ViewModel() {
+import com.google.gson.JsonParseException
 
-    private val _uiState = MutableStateFlow<UsersUiState>(UsersUiState.Loading)
-    val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
+class ExchangeRatesViewModel : ViewModel() {
+
+    private val _uiState = MutableStateFlow<ExchangeRatesUiState>(ExchangeRatesUiState.Loading)
+    val uiState: StateFlow<ExchangeRatesUiState> = _uiState.asStateFlow()
 
     init {
-        fetchUsers() // Стягуємо дані при відкритті екрану
+        fetchRates()
     }
 
-    fun fetchUsers() {
+    fun fetchRates() {
         viewModelScope.launch {
-            _uiState.value = UsersUiState.Loading // Показуємо крутилку
+            _uiState.value = ExchangeRatesUiState.Loading
             try {
-                // Виконуємо запит через Retrofit (він сам працює у фоні)
-                val usersList = NetworkModule.apiService.getUsers()
-                
-                // Якщо все добре, передаємо дані у State
-                _uiState.value = UsersUiState.Success(usersList)
-            } catch (e: Exception) {
-                // Відловлюємо відсутність інтернету або помилки сервера
-                _uiState.value = UsersUiState.Error(e.localizedMessage ?: "Unknown Error")
+                val rates = NetworkModule.privatBankApi.getExchangeRates()
+                _uiState.value = ExchangeRatesUiState.Success(rates)
+            } catch (e: CancellationException) {
+                throw e // Скасування корутини не є помилкою завантаження
+            } catch (e: IOException) {
+                _uiState.value = ExchangeRatesUiState.Error(
+                    "Не вдалося завантажити курси. Перевірте з’єднання."
+                )
+            } catch (e: HttpException) {
+                _uiState.value = ExchangeRatesUiState.Error(
+                    "Сервер повернув HTTP ${e.code()}. Спробуйте пізніше."
+                )
+            } catch (e: JsonParseException) {
+                _uiState.value = ExchangeRatesUiState.Error(
+                    "Не вдалося прочитати відповідь банку."
+                )
             }
         }
     }
 }
 ```
 
+Для методу з результатом `List<ExchangeRate>` Retrofit кидає `HttpException`, якщо HTTP-статус не належить до `2xx`. `IOException` означає проблему мережі або читання відповіді, а `JsonParseException` — помилку розбору JSON конвертером Gson. `CancellationException` передаємо далі, щоб корутина коректно завершувалася при знищенні ViewModel.
+
 #### 3. Compose UI:
 ```kotlin
 @Composable
-fun UsersScreen(viewModel: UsersViewModel) {
+fun ExchangeRatesScreen(viewModel: ExchangeRatesViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    when (val state = uiState) {
-        is UsersUiState.Loading -> {
-            CircularProgressIndicator() // Показуємо індикатор завантаження
-        }
-        is UsersUiState.Error -> {
-            Text(text = "Помилка: ${state.message}", color = Color.Red)
-            Button(onClick = { viewModel.fetchUsers() }) {
-                Text("Спробувати знову")
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Готівковий курс ПриватБанку",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        when (val state = uiState) {
+            ExchangeRatesUiState.Loading -> {
+                CircularProgressIndicator()
             }
-        }
-        is UsersUiState.Success -> {
-            // Відображаємо реальні дані з мережі у LazyColumn!
-            LazyColumn {
-                items(state.users) { user ->
-                    Text(text = "${user.name} (${user.userEmail})")
+            is ExchangeRatesUiState.Error -> {
+                Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                Button(onClick = { viewModel.fetchRates() }) {
+                    Text("Спробувати знову")
+                }
+            }
+            is ExchangeRatesUiState.Success -> {
+                Button(onClick = { viewModel.fetchRates() }) {
+                    Text("Оновити курси")
+                }
+
+                if (state.rates.isEmpty()) {
+                    Text("Банк не повернув курсів валют.")
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(state.rates) { rate ->
+                            Column {
+                                Text(
+                                    text = "${rate.currency} / ${rate.baseCurrency}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text("Банк купує: ${rate.buy} ${rate.baseCurrency}")
+                                Text("Банк продає: ${rate.sale} ${rate.baseCurrency}")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -413,9 +469,11 @@ fun UsersScreen(viewModel: UsersViewModel) {
 }
 ```
 
+Викличте `ExchangeRatesScreen()` у Compose-вмісті вашого екрана всередині теми застосунку. `viewModel()` отримає або створить ViewModel для поточного власника, а `collectAsStateWithLifecycle()` збиратиме її стан з урахуванням життєвого циклу. Звичайна рекомпозиція не створює новий мережевий запит: початкове завантаження запускається в `init` ViewModel, а наступні — кнопками. Це одноразові запити за поточним курсом, без автоматичного опитування сервера.
+
 ## Підсумок
 * **`Retrofit`** — зручний генератор мережевих викликів на основі Kotlin-інтерфейсів.
 * **`suspend` функції** у Retrofit позбавляють нас необхідності вручну перемикати потоки (не треба писати `withContext(Dispatchers.IO)`).
 * Завжди додавайте дозвіл **`INTERNET`** в маніфест.
-* Для зручного дебагу підключайте **`HttpLoggingInterceptor`** (від OkHttp), щоб бачити кожен запит та відповідь у Logcat.
+* **`GsonConverterFactory`** перетворює JSON на моделі даних, а **`@SerializedName`** зіставляє різні назви полів JSON та властивостей Kotlin.
 * Огортайте UI стан у **Sealed Class** (`Loading`, `Success`, `Error`), щоб легко керувати відображенням на екрані за допомогою Compose `when`.
