@@ -170,7 +170,7 @@ data class UserProfile(
 * **[Репозиторій Retrofit на GitHub](https://github.com/lysine-dev/retrofit)** — вихідний код, README та історія змін.
 
 > ⚠️ **Критичне правило (NetworkOnMainThreadException):**
-> Операційна система Android суворо **забороняє** робити будь-які мережеві запити у Головному потоці (Main Thread). Якщо ви спробуєте викликати нативний `url.readText()` без `Dispatchers.IO`, додаток миттєво впаде з помилкою. На щастя, Retrofit має вбудовану підтримку `suspend` функцій і автоматично виконує всі свої запити у безпечному фоновому потоці!
+> Операційна система Android забороняє виконувати блокувальні мережеві операції у головному потоці (Main Thread). Наприклад, `url.readText()` потрібно викликати у фоновому потоці. У нашому прикладі Retrofit запускатиме запит асинхронно через `Call.enqueue()`: мережеву роботу виконає OkHttp, а результат отримаємо через callback.
 
 ---
 
@@ -205,7 +205,9 @@ dependencies {
 
 Перша підключає Retrofit, друга — конвертер Gson для перетворення JSON на Kotlin-об'єкти. OkHttp та Gson підтягнуться автоматично як транзитивні залежності. Додаткові Gradle-плагіни для цього не потрібні.
 
-Виконайте **Sync Project with Gradle Files**. Далі вважаємо, що Compose, Material 3 та Lifecycle для ViewModel і `collectAsStateWithLifecycle()` вже налаштовані у проєкті. Стандартні імпорти Android, Compose та корутин у прикладах опущено — їх можна додати підказками Android Studio.
+**Версії `retrofit` та `converter-gson` мають збігатися:** у цьому прикладі обидві — `3.0.0`. Під час оновлення змінюйте версію в обох залежностях разом.
+
+Виконайте **Sync Project with Gradle Files**. Приклад орієнтований на сучасний Compose-шаблон Android Studio. Стандартні імпорти Android, Compose та корутин у прикладах опущено — їх можна додати підказками Android Studio.
 
 ---
 
@@ -241,12 +243,12 @@ API повертає **масив об'єктів**, кожен із яких м
 
 **Купівля та продаж вказані з погляду банку:** якщо ви здаєте долари банку, застосовується `buy`; якщо купуєте долари в банку — `sale`.
 
-Створюємо файл `ExchangeRate.kt`. За допомогою `@SerializedName` зіставляємо назви полів API зі зрозумілими назвами властивостей Kotlin:
+Створюємо файл `CurrencyItem.kt`. За допомогою `@SerializedName` зіставляємо назви полів API зі зрозумілими назвами властивостей Kotlin:
 
 ```kotlin
 import com.google.gson.annotations.SerializedName
 
-data class ExchangeRate(
+data class CurrencyItem(
     @SerializedName("ccy")
     val currency: String,
 
@@ -312,6 +314,7 @@ Retrofit дозволяє описати запит через Kotlin-інтер
 Базову адресу налаштуємо через `.baseUrl(...)` у підрозділі 5.4. Зараз створюємо файл `PrivatBankApi.kt`: у `@GET` записуємо шлях зі сталими параметрами, а через `@Query` передаємо змінний параметр `coursid`:
 
 ```kotlin
+import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -319,44 +322,46 @@ interface PrivatBankApi {
 
     // GET https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5
     @GET("pubinfo?json&exchange")
-    suspend fun getExchangeRates(
+    fun getCurrencyExchange(
         @Query("coursid") courseId: Int = 5
-    ): List<ExchangeRate>
+    ): Call<List<CurrencyItem>?>?
 }
 ```
 
 * **`@GET("pubinfo?json&exchange")`** задає HTTP-метод, відносний шлях та сталі параметри запиту.
 * **`@Query("coursid")`** додає до URL параметр із серверною назвою `coursid`. Kotlin-параметр `courseId` може мати іншу назву; `= 5` задає його значення за замовчуванням.
-* **`List<ExchangeRate>`** описує очікуваний результат: конвертер перетворить масив `[...]` із JSON на список об'єктів Kotlin.
+* **`Call<List<CurrencyItem>?>?`** описує об'єкт мережевого виклику. Gson перетворить масив `[...]` із JSON на список `CurrencyItem`, який отримаємо через відповідь. Внутрішній `?` дозволяє списку бути `null`, а зовнішній — самому об'єкту `Call`.
 
-Виклик `getExchangeRates()` сформує запит із `coursid=5`, а `getExchangeRates(courseId = 11)` — із `coursid=11`. Retrofit та OkHttp самі зберуть і відправлять HTTP-запит; вручну писати рядки `GET ... HTTP/1.1` та `Host` у Kotlin не потрібно. Заголовок `Accept` вище показаний для пояснення будови HTTP-запиту; наш приклад працює без його явного додавання.
+Виклик `getCurrencyExchange()` створить `Call` для запиту з `coursid=5`, а `getCurrencyExchange(courseId = 11)` — із `coursid=11`. **Сам виклик методу ще не відправляє запит:** для асинхронного виконання потрібно викликати `enqueue()`. Retrofit та OkHttp самі зберуть HTTP-запит; вручну писати рядки `GET ... HTTP/1.1` та `Host` у Kotlin не потрібно. Заголовок `Accept` вище показаний для пояснення будови HTTP-запиту; наш приклад працює без його явного додавання.
 
-> 💡 Метод Retrofit з **`suspend`** можна викликати з `viewModelScope`: Retrofit виконує HTTP-запит асинхронно через OkHttp, тому тут не потрібен `withContext(Dispatchers.IO)`. Сам модифікатор `suspend` не перемикає потоки для довільного блокувального коду.
+> 💡 `enqueue()` приймає `Callback` із двома методами: `onResponse()` для отриманої HTTP-відповіді та `onFailure()` для помилки виконання запиту. HTTP-коди `400`, `404` чи `500` теж потрапляють у `onResponse()`, тому статус потрібно перевіряти окремо.
 
 ---
 
 ### 5.4. Ініціалізація Retrofit
 
-У файлі `NetworkModule.kt` створимо Retrofit із конвертером Gson та реалізацію `PrivatBankApi`. Для навчального прикладу використаємо `object`:
+У файлі `PrivatBankNetworkModule.kt` створимо клас, який налаштовує Retrofit та надає реалізацію `PrivatBankApi` через властивість `service`. Запит викликатимемо у ViewModel:
 
 ```kotlin
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object NetworkModule {
+class PrivatBankNetworkModule {
 
-    private const val BASE_URL = "https://api.privatbank.ua/p24api/"
+    private val BASE_URL = "https://api.privatbank.ua/p24api/"
 
-    private val retrofit = Retrofit.Builder()
+    private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    val privatBankApi: PrivatBankApi = retrofit.create(PrivatBankApi::class.java)
+    val service: PrivatBankApi = retrofit.create(PrivatBankApi::class.java)
 }
 ```
 
 Базова адреса Retrofit має завершуватися `/`. Разом із шляхом `pubinfo` та параметрами вона утворює повний URL із попереднього підрозділу. `GsonConverterFactory.create()` підключає перетворення JSON на моделі даних. Retrofit створить OkHttp-клієнт автоматично.
+
+Властивість `service` доступна з ViewModel: через неї викличемо `getCurrencyExchange(5)`, а отриманий `Call` запустимо через `enqueue()`.
 
 ---
 
@@ -368,51 +373,84 @@ object NetworkModule {
 ```kotlin
 sealed interface ExchangeRatesUiState {
     object Loading : ExchangeRatesUiState
-    data class Success(val rates: List<ExchangeRate>) : ExchangeRatesUiState
+    data class Success(val rates: List<CurrencyItem>) : ExchangeRatesUiState
     data class Error(val message: String) : ExchangeRatesUiState
 }
 ```
 
 #### 2. ViewModel:
+
+Створимо екземпляр `PrivatBankNetworkModule`. У ViewModel викличемо `networkModule.service.getCurrencyExchange(5)`, запустимо запит через `enqueue()` та оновимо стан екрана у callback:
+
 ```kotlin
-import com.google.gson.JsonParseException
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class ExchangeRatesViewModel : ViewModel() {
 
+    private val networkModule = PrivatBankNetworkModule()
+
     private val _uiState = MutableStateFlow<ExchangeRatesUiState>(ExchangeRatesUiState.Loading)
     val uiState: StateFlow<ExchangeRatesUiState> = _uiState.asStateFlow()
+
+    private var currentCall: Call<List<CurrencyItem>?>? = null
 
     init {
         fetchRates()
     }
 
     fun fetchRates() {
-        viewModelScope.launch {
-            _uiState.value = ExchangeRatesUiState.Loading
-            try {
-                val rates = NetworkModule.privatBankApi.getExchangeRates()
-                _uiState.value = ExchangeRatesUiState.Success(rates)
-            } catch (e: CancellationException) {
-                throw e // Скасування корутини не є помилкою завантаження
-            } catch (e: IOException) {
+        currentCall?.cancel()
+        _uiState.value = ExchangeRatesUiState.Loading
+
+        val call = networkModule.service.getCurrencyExchange(5)
+        currentCall = call
+
+        if (call == null) {
+            _uiState.value = ExchangeRatesUiState.Error("Не вдалося створити запит.")
+            return
+        }
+
+        call.enqueue(object : Callback<List<CurrencyItem>?> {
+            override fun onResponse(
+                call: Call<List<CurrencyItem>?>,
+                response: Response<List<CurrencyItem>?>
+            ) {
+                if (call !== currentCall || call.isCanceled) return
+
+                val rates = response.body()
+                _uiState.value = when {
+                    !response.isSuccessful -> ExchangeRatesUiState.Error(
+                        "Сервер повернув HTTP ${response.code()}. Спробуйте пізніше."
+                    )
+                    rates == null -> ExchangeRatesUiState.Error(
+                        "Банк повернув відповідь без даних."
+                    )
+                    else -> ExchangeRatesUiState.Success(rates)
+                }
+            }
+
+            override fun onFailure(call: Call<List<CurrencyItem>?>, throwable: Throwable) {
+                if (call !== currentCall || call.isCanceled) return
+
                 _uiState.value = ExchangeRatesUiState.Error(
-                    "Не вдалося завантажити курси. Перевірте з’єднання."
-                )
-            } catch (e: HttpException) {
-                _uiState.value = ExchangeRatesUiState.Error(
-                    "Сервер повернув HTTP ${e.code()}. Спробуйте пізніше."
-                )
-            } catch (e: JsonParseException) {
-                _uiState.value = ExchangeRatesUiState.Error(
-                    "Не вдалося прочитати відповідь банку."
+                    "Не вдалося отримати курси. Спробуйте ще раз."
                 )
             }
-        }
+        })
+    }
+
+    override fun onCleared() {
+        currentCall?.cancel()
+        super.onCleared()
     }
 }
 ```
 
-Для методу з результатом `List<ExchangeRate>` Retrofit кидає `HttpException`, якщо HTTP-статус не належить до `2xx`. `IOException` означає проблему мережі або читання відповіді, а `JsonParseException` — помилку розбору JSON конвертером Gson. `CancellationException` передаємо далі, щоб корутина коректно завершувалася при знищенні ViewModel.
+У `onResponse()` перевіряємо `response.isSuccessful` (HTTP-статус `2xx`) та отримуємо список через `response.body()`. Тіло відповіді може бути `null`; порожній список `[]` при цьому є коректним результатом, який окремо відобразить UI. У `onFailure()` обробляємо помилки з'єднання, читання відповіді або перетворення JSON.
+
+`currentCall` зберігає поточний виклик. Перед оновленням скасовуємо попередній, а в `onCleared()` — незавершений запит при знищенні ViewModel. Callback ігнорує скасовані та застарілі виклики. Кожне оновлення створює новий `Call`: один екземпляр можна виконати лише один раз.
 
 #### 3. Compose UI:
 ```kotlin
@@ -473,7 +511,7 @@ fun ExchangeRatesScreen(viewModel: ExchangeRatesViewModel = viewModel()) {
 
 ## Підсумок
 * **`Retrofit`** — зручний генератор мережевих викликів на основі Kotlin-інтерфейсів.
-* **`suspend` функції** у Retrofit позбавляють нас необхідності вручну перемикати потоки (не треба писати `withContext(Dispatchers.IO)`).
+* **`Call.enqueue()`** виконує запит асинхронно та повертає результат через `Callback`; HTTP-статус перевіряємо в `onResponse()`.
 * Завжди додавайте дозвіл **`INTERNET`** в маніфест.
 * **`GsonConverterFactory`** перетворює JSON на моделі даних, а **`@SerializedName`** зіставляє різні назви полів JSON та властивостей Kotlin.
 * Огортайте UI стан у **Sealed Class** (`Loading`, `Success`, `Error`), щоб легко керувати відображенням на екрані за допомогою Compose `when`.
