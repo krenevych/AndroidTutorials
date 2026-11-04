@@ -64,7 +64,7 @@ suspend fun fetchUrlNaively() {
 
 * **JSONPlaceholder** (`https://jsonplaceholder.typicode.com/users`) — безкоштовний фейковий API для навчання та тестування додатків. Повертає готові масиви користувачів, постів та коментарів.
 * **npoint.io** (`https://www.npoint.io/`) — чудовий безкоштовний сервіс для створення власного фейкового API. Ви просто вставляєте туди свій JSON-файл, і сервіс генерує для вас унікальний URL для тестування.
-* **ПриватБанк API** (`https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5`) — відкрите API, яке миттєво повертає актуальний курс валют в Україні.
+* **ПриватБанк API** (`https://api.privatbank.ua/`) — відкрите API, яке миттєво повертає актуальний курс валют в Україні.
 * **CryptoCompare API** (`https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,EUR`) — потужне безкоштовне API для отримання актуальних цін на криптовалюти. Дуже зручно для створення додатків-трекерів курсу Біткоїна!
 * **LibreTranslate API** (`https://libretranslate.com/`) — повністю відкрите та безкоштовне API для машинного перекладу тексту (альтернатива платному Google Translate). Ідеально для створення власного словника-перекладача.
 * **OpenWeatherMap** (`https://api.openweathermap.org/data/2.5/weather?q=Kyiv&appid={your_key}`) — популярне API для отримання погоди. На відміну від попередніх, вимагає передати унікальний секретний `API_KEY`, щоб сервер міг ідентифікувати вас і не дозволив зробити забагато запитів.
