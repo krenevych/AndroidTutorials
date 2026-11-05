@@ -40,13 +40,13 @@ plugins {
 Потім додайте самі бібліотеки Room у блок `dependencies`:
 ```kotlin
 dependencies {
-    val roomVersion = "3.0.3"
+    val room_version = "3.0.3"
     
     // Основна бібліотека Room
-    implementation("androidx.room3:room3-runtime:$roomVersion")
+    implementation("androidx.room3:room3-runtime:$room_version")
     
     // Компілятор Room (обробник анотацій через KSP)
-    ksp("androidx.room3:room3-compiler:$roomVersion") 
+    ksp("androidx.room3:room3-compiler:$room_version")
 }
 ```
 
