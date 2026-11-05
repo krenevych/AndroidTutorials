@@ -207,6 +207,98 @@ items(
 
 ---
 
+## 6. Видалення жестом: `SwipeToDismissBox`
+
+У сучасних додатках (наприклад, поштові клієнти чи месенджери) елементи списку часто видаляють не натисканням на кнопку, а жестом свайпу (змахування) вліво чи вправо. У Compose для цього існує готовий компонент **`SwipeToDismissBox`**.
+
+Цей компонент самостійно обробляє рух пальця, визначає напрямок свайпу й анімує вашу картку (повертає її на місце, якщо жест був слабким, або зсуває за межі екрану, якщо жест завершено). 
+
+Все, що вам потрібно — це огорнути вашу картку цим компонентом, задати стан (`SwipeToDismissBoxState`), намалювати фон, який буде видно під час свайпу (наприклад, червоний колір з іконкою кошика), і визначити логіку видалення даних у параметрі `onDismissed`.
+
+### Приклад реалізації свайпу для видалення:
+
+```kotlin
+LazyColumn(
+    modifier = Modifier.fillMaxWidth()
+) {
+    items(
+        items = cardsList,
+        key = { card -> card.id } // ⚡ Для SwipeToDismiss унікальний ключ абсолютно обов'язковий!
+    ) { card ->
+
+        // 1. Створюємо стан свайпу для конкретного елемента
+        val dismissState = rememberSwipeToDismissBoxState(
+            // Поріг спрацьовування: потрібно свайпнути мінімум на 50% ширини картки
+            positionalThreshold = { totalDistance -> totalDistance * 0.5f }
+        )
+
+        // 2. Обгортаємо нашу картку у SwipeToDismissBox
+        SwipeToDismissBox(
+            state = dismissState,
+            // onDismiss чекає settledValue: це означає, що жест та анімація зсуву завершені
+            onDismiss = {
+                onRemoveCard(card) // Ваша функція видалення елемента з ViewModel / БД
+            },
+            // 3. Фон, який буде "проглядати" під час свайпу
+            backgroundContent = {
+                // Колір змінюється залежно від того, чи ми вже тягнемо картку
+                val color = when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.Settled -> Color.Transparent
+                    else -> MaterialTheme.colorScheme.errorContainer
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp) // Важливо: такий самий padding, як і у самої Card!
+                        .background(color, shape = MaterialTheme.shapes.medium)
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Показуємо іконки кошика з обох боків
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            },
+            modifier = Modifier.animateItem() // ⚡ Додає плавну анімацію для сусідніх карток при видаленні
+        ) {
+            // 4. Наш реальний контент (Картка)
+            ExpandableCard(cardData = card)
+        }
+    }
+}
+```
+
+> 💡 **Важлива примітка:** Сам по собі компонент `SwipeToDismissBox` нічого не видаляє з пам'яті чи бази даних (він лише малює анімацію зсуву та викликає колбек `onDismiss`). Видалення реальних даних зі списку — це виключно ваша відповідальність у функції, яку ви передаєте в `onDismiss`! 
+
+### Короткий шаблон для запам'ятовування:
+Загалом, уся логіка зводиться до цієї простої структури. `SwipeToDismissBox` уже обробляє рух пальця, визначає напрямок свайпу й анімує картку: повертає назад або зсуває за межі. Тобі залишається задати стан, вигляд фону та дію після завершення:
+
+```kotlin
+val dismissState = rememberSwipeToDismissBoxState(
+    positionalThreshold = { width -> width * 0.5f }
+)
+
+SwipeToDismissBox(
+    state = dismissState,
+    onDismiss = { /* Дія при видаленні (наприклад, onRemoveCard(card)) */ },
+    backgroundContent = { /* Фон під карткою */ }
+) {
+    ExpandableCard(cardData = card)
+}
+```
+
+---
+
 ## Повний практичний приклад: Список розгортаних карток курсу
 
 У цьому прикладі кожна картка списку `ExpandableCard` зберігає свій власний стан розгортання (`isExpanded`) під час скролінгу завдяки `rememberSaveable` та ключу `key`:
