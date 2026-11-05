@@ -58,28 +58,32 @@ dependencies {
 
 ## 3. Крок 2: Створення Entity (Таблиці)
 
-Створимо таблицю для збереження користувачів. Використовуємо анотацію **`@Entity`** перед звичайним Data-класом.
+Створимо таблицю для збереження карток. Використовуємо анотацію **`@Entity`** перед звичайним Data-класом.
 
 ```kotlin
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import androidx.room.ColumnInfo
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.PrimaryKey
 
-// Назва таблиці в базі буде "users_table"
-@Entity(tableName = "users_table")
-data class UserEntity(
+// Назва таблиці в базі буде "card_table"
+@Entity(tableName = "card_table")
+data class CardData(
     
     // Кожна таблиця зобов'язана мати первинний ключ.
     // autoGenerate = true означає, що SQLite сама буде нумерувати (1, 2, 3...)
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    
-    // За замовчуванням колонка в базі назветься "name", 
+
+    // За замовчуванням колонка в базі назветься як і змінна, 
     // але ви можете змінити це через @ColumnInfo
-    @ColumnInfo(name = "user_name")
-    val name: String,
+    @ColumnInfo(name = "Title")
+    val title: String = "Заголовок картки",
     
-    val email: String
+    @ColumnInfo(name = "Description")
+    val description: String = "Це дуже детальний опис...",
+    
+    @ColumnInfo(name = "CreationTime")
+    val creationTime: String = "2023-10-27 15:30"
 )
 ```
 
@@ -90,33 +94,33 @@ data class UserEntity(
 Тут ми описуємо, ЯК саме ми хочемо працювати з таблицею. Це звичайний `interface` з анотацією **`@Dao`**.
 
 ```kotlin
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room3.Dao
+import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
+import androidx.room3.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface UserDao {
+interface CardDao {
 
     // 1. ЗАПИС ДАНИХ (Виконується асинхронно через suspend)
     // OnConflictStrategy.REPLACE - якщо такий ID вже є, він оновиться
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUser(user: UserEntity)
+    suspend fun insertCard(card: CardData)
 
     // 2. ВИДАЛЕННЯ ДАНИХ
-    @Query("DELETE FROM users_table WHERE id = :userId")
-    suspend fun deleteUserById(userId: Int)
+    @Query("DELETE FROM card_table WHERE id = :id")
+    suspend fun deleteCardById(id: Int)
 
     // 3. ЗЧИТУВАННЯ ДАНИХ (Повертає реактивний Flow!)
     // Зверніть увагу: ми НЕ пишемо suspend для функцій, що повертають Flow!
-    @Query("SELECT * FROM users_table ORDER BY user_name ASC")
-    fun getAllUsers(): Flow<List<UserEntity>>
+    @Query("SELECT * FROM card_table ORDER BY Title ASC")
+    fun getAllCards(): Flow<List<CardData>>
 }
 ```
 
-> 💡 **Магія Flow у Room:** Зверніть увагу на функцію `getAllUsers()`. Оскільки вона повертає `Flow`, Room налаштує **автоматичний наглядач (Observer)** за цією таблицею. 
-> Щоразу, коли ви викличете `insertUser` або `deleteUserById`, таблиця зміниться, і Room **АВТОМАТИЧНО згенерує новий список у Flow**. Ваш екран у Compose перемалюється миттєво без потреби викликати "оновити дані" вручну!
+> 💡 **Магія Flow у Room:** Зверніть увагу на функцію `getAllCards()`. Оскільки вона повертає `Flow`, Room налаштує **автоматичний наглядач (Observer)** за цією таблицею. 
+> Щоразу, коли ви викличете `insertCard` або `deleteCardById`, таблиця зміниться, і Room **АВТОМАТИЧНО згенерує новий список у Flow**. Ваш екран у Compose перемалюється миттєво без потреби викликати "оновити дані" вручну!
 
 ---
 
@@ -126,29 +130,33 @@ interface UserDao {
 
 ```kotlin
 import android.content.Context
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
+import androidx.room3.Database
+import androidx.room3.Room
+import androidx.room3.RoomDatabase
 
 // Вказуємо список усіх таблиць (entities) та версію бази даних
-@Database(entities = [UserEntity::class], version = 1, exportSchema = false)
-abstract class AppDatabase : RoomDatabase() {
+@Database(entities = [CardData::class], version = 1)
+abstract class CardDatabase : RoomDatabase() {
 
     // Метод, через який ми отримуватимемо доступ до нашого DAO
-    abstract fun userDao(): UserDao
+    abstract fun cardDao(): CardDao
 
     companion object {
         // Запобігаємо створенню кількох екземплярів бази в пам'яті (Singleton)
         @Volatile
-        private var INSTANCE: AppDatabase? = null
+        private var INSTANCE: CardDatabase? = null
 
-        fun getDatabase(context: Context): AppDatabase {
+        fun getDatabase(context: Context): CardDatabase {
             return INSTANCE ?: synchronized(this) {
+                // Подвійна перевірка (Double-checked locking) для потокобезпеки
+                INSTANCE?.let { return it }
+                
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    AppDatabase::class.java,
-                    "app_database.db" // Назва фізичного файлу бази на диску
+                    CardDatabase::class.java,
+                    "Cards" // Назва фізичного файлу бази на диску
                 ).build()
+                
                 INSTANCE = instance
                 instance
             }
@@ -165,24 +173,31 @@ abstract class AppDatabase : RoomDatabase() {
 
 ### ViewModel:
 ```kotlin
-class UsersViewModel(application: Application) : AndroidViewModel(application) {
+class CardsViewModel(application: Application) : AndroidViewModel(application) {
     
     // Отримуємо екземпляр DAO
-    private val userDao = AppDatabase.getDatabase(application).userDao()
+    private val cardDao = AppDatabase.getDatabase(application).cardDao()
 
     // 1. Отримуємо холодний Flow з Room і перетворюємо його у гарячий StateFlow для Compose
-    val allUsers: StateFlow<List<UserEntity>> = userDao.getAllUsers()
+    val allCards: StateFlow<List<CardData>> = cardDao.getAllCards()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList() // Поки база вантажиться, список порожній
         )
 
-    // 2. Метод для додавання нового користувача по кліку
-    fun addUser(name: String, email: String) {
+    // 2. Метод для додавання нової картки
+    fun addCard(title: String, description: String) {
         viewModelScope.launch {
-            val newUser = UserEntity(name = name, email = email)
-            userDao.insertUser(newUser) // Зберігаємо у фоновому потоці
+            val newCard = CardData(title = title, description = description)
+            cardDao.insertCard(newCard) // Зберігаємо у фоновому потоці
+        }
+    }
+    
+    // 3. Метод для видалення
+    fun removeCard(id: Int) {
+        viewModelScope.launch {
+            cardDao.deleteCardById(id)
         }
     }
 }
@@ -191,24 +206,28 @@ class UsersViewModel(application: Application) : AndroidViewModel(application) {
 ### Compose UI:
 ```kotlin
 @Composable
-fun UsersScreen(viewModel: UsersViewModel) {
+fun CardsScreen(viewModel: CardsViewModel) {
     // Безпечно підписуємося на реактивний потік з бази даних!
-    val usersList by viewModel.allUsers.collectAsStateWithLifecycle()
+    val cardsList by viewModel.allCards.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.padding(16.dp)) {
         
-        Button(onClick = { viewModel.addUser("Олексій", "alex@mail.com") }) {
-            Text("Додати Олексія")
+        Button(onClick = { viewModel.addCard("Нова картка", "Опис...") }) {
+            Text("Додати картку")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Відображаємо список
         LazyColumn {
-            items(usersList) { user ->
+            items(
+                items = cardsList,
+                key = { card -> card.id }
+            ) { card ->
+                // Тут можна застосувати SwipeToDismissBox, як ми вчили раніше!
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                     Text(
-                        text = "ID: ${user.id} | ${user.name}",
+                        text = "ID: ${card.id} | ${card.title}",
                         modifier = Modifier.padding(16.dp)
                     )
                 }
