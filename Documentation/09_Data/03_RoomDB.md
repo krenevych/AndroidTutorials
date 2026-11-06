@@ -29,11 +29,21 @@
 
 Room використовує генерацію коду (KSP — Kotlin Symbol Processing) для створення реалізацій ваших інтерфейсів. 
 
-Відкрийте файл `build.gradle.kts` вашого модуля і додайте плагін KSP нагорі:
+**1. Кореневий файл (Project) `build.gradle.kts`:**
+Спочатку потрібно оголосити версію плагіна KSP:
 ```kotlin
 plugins {
-    // ...
-    id("com.google.devtools.ksp") // Плагін для кодогенерації Room
+    // ... інші плагіни ...
+    id("com.google.devtools.ksp") version "2.3.10" apply false 
+}
+```
+
+**2. Файл модуля (App) `build.gradle.kts`:**
+Після цього ви можете застосувати плагін у вашому модулі (вже без вказівки версії):
+```kotlin
+plugins {
+    // ... інші плагіни ...
+    id("com.google.devtools.ksp") // Підключаємо плагін KSP
 }
 ```
 
