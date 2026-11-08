@@ -70,6 +70,9 @@ sharedPref.edit {
 
 ## 2. Сучасний підхід: `Preferences DataStore`
 
+> 📦 **Початковий проект:** Заготовку проекту (базовий Compose UI) ви знайдете у репозиторії на GitHub: [krenevych/Compose](https://github.com/krenevych/Compose) (гілка **`main`**, модуль **`sharedpref`**).<br>
+> 💡 **Приклад розв'язку:** Готовий завершений код із реалізацією `Preferences DataStore` знаходиться на гілці **`datastore_end`** (модуль **`sharedpref`**).
+
 У 2020 році Google представив **DataStore** як ідеальну заміну SharedPreferences. Він повністю побудований на **Kotlin Coroutines та Flow**.
 
 ### Чому DataStore кращий?
