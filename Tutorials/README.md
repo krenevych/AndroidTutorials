@@ -50,3 +50,9 @@
 * [Гібридна служба та LocalBinder (`02_2_BoundServiceTask.md`)](08_SystemComponents/02_2_BoundServiceTask.md) — перетворення таймера на Bound Service, створення `LocalBinder` для підключення `Activity` через `ServiceConnection` (`onStart`/`onStop`), експонування `StateFlow` зі служби у Compose UI.
 * [Гарантоване фонове виконання з WorkManager (`03_1_WorkManagerTask.md`)](08_SystemComponents/03_1_WorkManagerTask.md) — створення `CoroutineWorker`, передача `InputData` та отримання `OutputData`, підписка на статус через `getWorkInfoByIdLiveData`, використання жорстких `Constraints` (Wi-Fi, зарядка) та політики `enqueueUniquePeriodicWork`.
 * [Періодичне нагадування "Випий води!" (`03_2_WorkManagerReminderTask.md`)](08_SystemComponents/03_2_WorkManagerReminderTask.md) — використання `PeriodicWorkRequest`, взаємодія з `NotificationManager` всередині Воркера, скасування задачі через `cancelUniqueWork` та керування через Switch у Compose UI.
+
+---
+
+## 09. Робота з даними
+
+* [«ПриватБанк — валюти»: архів курсів на обрану дату (`02_RetrofitTask.md`)](09_Data/02_RetrofitTask.md) — Retrofit та Gson, вибір дати, список валют у Compose, обробка станів завантаження й помилок та збереження стану при повороті екрана через MVVM.
