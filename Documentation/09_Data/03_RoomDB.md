@@ -66,7 +66,9 @@ dependencies {
 
 ---
 
-## 3. Крок 2: Створення Entity (Таблиці)
+## 3. Створення та використання бази даних Room
+
+### Крок 1: Створення Entity (Таблиці)
 
 Створимо таблицю для збереження карток. Використовуємо анотацію **`@Entity`** перед звичайним Data-класом.
 
@@ -99,7 +101,7 @@ data class CardData(
 
 ---
 
-## 4. Крок 3: Створення DAO (Data Access Object)
+### Крок 2: Створення DAO (Data Access Object)
 
 Тут ми описуємо, ЯК саме ми хочемо працювати з таблицею. Це звичайний `interface` з анотацією **`@Dao`**.
 
@@ -134,7 +136,7 @@ interface CardDao {
 
 ---
 
-## 5. Крок 4: Створення Database (Бази даних)
+### Крок 3: Створення Database (Бази даних)
 
 Створюємо абстрактний клас бази даних, який наслідується від `RoomDatabase`. 
 
@@ -177,11 +179,11 @@ abstract class CardDatabase : RoomDatabase() {
 
 ---
 
-## 6. Крок 5: Використання у ViewModel та Compose
+### Крок 4: Використання у ViewModel та Compose
 
 Залишилося лише з'єднати наш чудовий реактивний `Dao` з інтерфейсом користувача через ViewModel.
 
-### ViewModel:
+#### ViewModel:
 ```kotlin
 class CardsViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -213,7 +215,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
 }
 ```
 
-### Compose UI:
+#### Compose UI:
 ```kotlin
 @Composable
 fun CardsScreen(viewModel: CardsViewModel) {
