@@ -60,6 +60,12 @@
 
 ---
 
+## 10. Архітектура та залежності
+
+* [Dependency Injection — компоненти комп’ютера (`01_Dependency_InjectionTask.md`)](10_Architecture/01_Dependency_InjectionTask.md) — вправи з ін’єкції через конструктор та у властивості, ручний компонент із `inject()` і контрольні запитання.
+
+---
+
 ## Фінальний проєкт
 
 * [«Біржа криптовалют»](FinalProject/CryptoExchangeProject.md) — командний проєкт для двох учасників: чиста архітектура, MVVM, Retrofit, Room, WorkManager та Compose із Coil; GitHub-репозиторій і демонстраційне відео.
