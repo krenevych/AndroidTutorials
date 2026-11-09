@@ -47,3 +47,7 @@
 * [Локальні налаштування: SharedPreferences та DataStore (`01_Preferences.md`)](09_Data/01_Preferences.md) — недоліки застарілого `SharedPreferences`, переваги `Preferences DataStore`, створення строго типізованих ключів, читання даних через `Flow`, асинхронний запис через `edit {}` та магічна реактивна інтеграція з `ViewModel` і Compose.
 * [Робота з мережею: Retrofit та OkHttp (`02_Retrofit.md`)](09_Data/02_Retrofit.md) — архітектура мережевого стеку, дозволи `INTERNET`, `Kotlinx Serialization`, інтерфейси `@GET`/`@Path`, логування через `OkHttpClient`, використання `suspend` функцій та обробка станів екрану (`Sealed Interface: Loading, Success, Error`) у `ViewModel`.
 * [Локальна база даних: Room Database (`03_RoomDB.md`)](09_Data/03_RoomDB.md) — архітектура локального сховища SQLite, кодогенерація KSP, створення `@Entity`, інтерфейси запитів `@Dao`, `RoomDatabase` як синглтон, та потужна магія автооновлення UI через повернення `Flow` з бази даних.
+
+## 10. Архітектура та залежності
+
+* [Dependency Injection: хто збирає комп’ютер? (`01_Dependency_Injection.md`)](10_Architecture/01_Dependency_Injection.md) — вступ до DI на звичайному Kotlin без Android: залежності, ін’єкція через конструктор та у властивості, ризики `lateinit`, інтерфейси та заміна компонентів, ручне складання об’єктів, контейнер, час життя залежностей і відмінності між DI, IoC та DIP.
