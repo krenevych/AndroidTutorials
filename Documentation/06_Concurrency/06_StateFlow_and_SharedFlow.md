@@ -121,7 +121,37 @@ val state by viewModel.uiState.collectAsStateWithLifecycle()
 
 ---
 
-## 5. `SharedFlow` — Для одноразових подій (Single Events)
+## 5. Золотий стандарт ViewModel: Оператор `stateIn`
+
+Найчастіше у репозиторії ви отримуєте звичайний холодний `Flow` (наприклад, з бази даних Room чи файлу). Щоб перетворити його на гарячий `StateFlow` усередині `ViewModel`, використовується оператор **`stateIn`**:
+
+```kotlin
+class UserViewModel(repository: UserRepository) : ViewModel() {
+
+    // Автоматично перетворює холодний Flow з бази у гарячий StateFlow
+    val userState: StateFlow<User> = repository.getUserFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000), // Золотий стандарт!
+            initialValue = User.EMPTY
+        )
+}
+```
+
+> 💡 **Чому саме `SharingStarted.WhileSubscribed(5000)`?**
+> Цей параметр каже: *"Тримай потік активним, поки є хоч один спостерігач. Якщо спостерігач зник (наприклад, екран перевернувся), почекай паузу у 5 секунд. Якщо за 5 секунд ніхто не підписався знову — зупини фоновий потік для збереження ресурсів"*.
+
+### Як зчитувати такий `StateFlow` у UI?
+Оскільки оператор `stateIn` повертає стандартний `StateFlow`, у `Activity` чи Compose підписка на нього відбувається точно так само, як і на будь-який інший `StateFlow` (через `repeatOnLifecycle` у Views або `collectAsStateWithLifecycle()` у Compose):
+
+```kotlin
+// У Jetpack Compose зчитування відбувається миттєво:
+val userState by viewModel.userState.collectAsStateWithLifecycle()
+```
+
+---
+
+## 6. `SharedFlow` — Для одноразових подій (Single Events)
 
 **`SharedFlow`** — це гарячий потік **без початкового значення**. Він використовується для надсилання **одноразових подій UI** (Events), які не повинні повторюватися при повороті екрану:
 * Показ `Toast` чи `Snackbar`.
@@ -173,36 +203,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
         }
     }
 }
-```
-
----
-
-## 6. Золотий стандарт ViewModel: Оператор `stateIn`
-
-Найчастіше у репозиторії ви отримуєте звичайний холодний `Flow` (наприклад, з бази даних Room чи файлу). Щоб перетворити його на гарячий `StateFlow` усередині `ViewModel`, використовується оператор **`stateIn`**:
-
-```kotlin
-class UserViewModel(repository: UserRepository) : ViewModel() {
-
-    // Автоматично перетворює холодний Flow з бази у гарячий StateFlow
-    val userState: StateFlow<User> = repository.getUserFlow()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000), // Золотий стандарт!
-            initialValue = User.EMPTY
-        )
-}
-```
-
-> 💡 **Чому саме `SharingStarted.WhileSubscribed(5000)`?**
-> Цей параметр каже: *"Тримай потік активним, поки є хоч один спостерігач. Якщо спостерігач зник (наприклад, екран перевернувся), почекай паузу у 5 секунд. Якщо за 5 секунд ніхто не підписався знову — зупини фоновий потік для збереження ресурсів"*.
-
-### Як зчитувати такий `StateFlow` у UI?
-Оскільки оператор `stateIn` повертає стандартний `StateFlow`, у `Activity` чи Compose підписка на нього відбувається точно так само, як і на будь-який інший `StateFlow` (через `repeatOnLifecycle` у Views або `collectAsStateWithLifecycle()` у Compose):
-
-```kotlin
-// У Jetpack Compose зчитування відбувається миттєво:
-val userState by viewModel.userState.collectAsStateWithLifecycle()
 ```
 
 ---
