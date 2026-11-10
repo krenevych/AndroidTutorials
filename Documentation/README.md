@@ -51,3 +51,4 @@
 ## 10. Архітектура та залежності
 
 * [Dependency Injection: хто збирає комп’ютер? (`01_Dependency_Injection.md`)](10_Architecture/01_Dependency_Injection.md) — вступ до DI на звичайному Kotlin без Android: залежності, ін’єкція через конструктор та у властивості, ризики `lateinit`, інтерфейси та заміна компонентів, ручне складання об’єктів, контейнер, час життя залежностей і відмінності між DI, IoC та DIP.
+* [Hilt: від ручного `inject()` до автоматичного складання залежностей (`02_Hilt.md`)](10_Architecture/02_Hilt.md) — підключення Hilt через KSP, `@Inject`, `@Binds` і `@Provides`, ін’єкція в Activity, компоненти та scope, ViewModel і Compose, qualifier-и та типові помилки.
