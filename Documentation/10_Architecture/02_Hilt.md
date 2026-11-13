@@ -387,6 +387,59 @@ class ComputerViewModel @Inject constructor(
 
 Hilt забезпечує залежності, а отримання ViewModel відбувається через механізм Jetpack ViewModel. Для Activity можна використати `private val viewModel: ComputerViewModel by viewModels()` з імпортом `androidx.activity.viewModels`. Не отримуйте ViewModel через `@Inject lateinit var viewModel` і не створюйте її вручну в UI. [Hilt View Models](https://dagger.dev/hilt/view-model.html).
 
+### Додавання Context або Application у ViewModel
+
+Якщо ViewModel потрібен доступ до API Android, наприклад до каталогу файлів застосунку, контекст можна передати через той самий конструктор. Для цього використовуйте **контекст застосунку** з анотацією `@ApplicationContext`:
+
+```kotlin
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+
+@HiltViewModel
+class ComputerViewModel @Inject constructor(
+    private val computer: Computer,
+    @ApplicationContext private val context: Context
+) : ViewModel() {
+    fun boot() {
+        computer.boot()
+    }
+
+    fun filesDirectoryPath(): String = context.filesDir.absolutePath
+}
+```
+
+`@ApplicationContext` уточнює, який саме `Context` потрібен. Hilt уже має правило його надання, тому окремий `@Provides`-метод не потрібен. Не передавайте сюди Activity або `@ActivityContext`: ViewModel переживає зміну конфігурації, а посилання на стару Activity може спричинити витік пам’яті. До того ж binding із `ActivityComponent` недоступний у `ViewModelComponent`.
+
+Якщо потрібен саме об’єкт `Application`, можна замінити попередній варіант таким:
+
+```kotlin
+import android.app.Application
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+@HiltViewModel
+class ComputerViewModel @Inject constructor(
+    private val computer: Computer,
+    private val application: Application
+) : ViewModel() {
+    fun boot() {
+        computer.boot()
+    }
+
+    fun filesDirectoryPath(): String = application.filesDir.absolutePath
+}
+```
+
+Для типу `Application` анотація `@ApplicationContext` не потрібна: Hilt надає об’єкт застосунку як вбудовану залежність. Наслідувати `AndroidViewModel` лише заради доступу до Application теж не потрібно — достатньо звичайної `ViewModel` з конструкторною ін’єкцією. Це два альтернативні варіанти одного класу; додавати обидва параметри для цієї задачі не потрібно. [Вбудовані залежності Hilt](https://dagger.dev/hilt/components.html#component-default-bindings).
+
+У прикладному коді роботу з файлами, базою даних чи налаштуваннями краще винести в репозиторій або окремий сервіс, передати контекст туди, а у ViewModel ін’єктувати вже цю залежність. Так ViewModel простіше тестувати без Android-середовища.
+
+### Отримання ViewModel у Compose
+
 Для отримання ViewModel через `hiltViewModel()` у Compose додайте окрему залежність у `app/build.gradle.kts`:
 
 ```kotlin
