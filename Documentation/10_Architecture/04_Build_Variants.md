@@ -1,5 +1,8 @@
 # Build Variants (Варіанти збірки) в Android
 
+> 📦 **Початковий проект.** Заготовку проекту списку покупок ви знайдете в репозиторії `krenevych/Compose` на GitHub у модулі `shoplist` гілки `shoplist`. [Відкрити заготовку](https://github.com/krenevych/Compose/tree/shoplist/shoplist).<br>
+> 💡 **Приклад розв'язку.** Готовий проєкт списку покупок із налаштованими варіантами збірки (Build Variants) доступний у модулі `shoplist` гілки `build_variants`. [Відкрити розв’язок](https://github.com/krenevych/Compose/tree/build_variants/shoplist).
+
 Уявіть, що ви розробляєте застосунок і хочете зробити дві версії:
 
 1. **Безкоштовну** (з рекламою).
