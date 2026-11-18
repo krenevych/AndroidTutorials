@@ -253,6 +253,74 @@ object AdsConfig {
 
 ---
 
+## 6. Кастомне налаштування через Variant API
+
+`buildTypes` і `productFlavors` достатньо для більшості статичних налаштувань. Якщо потрібно відкинути певну комбінацію або обчислити значення для кожного варіанта, використовуйте **Variant API** через блок `androidComponents { ... }`.
+
+Цей блок розміщують у модульному `build.gradle.kts` **поруч з `android { ... }`, а не всередині нього**. Його callback-и виконуються під час конфігурації збірки, а не під час запуску застосунку чи виконання окремої Gradle-задачі.
+
+### Коли використовувати кожен callback?
+
+| Callback | Що отримуємо | Для чого використовувати |
+| --- | --- | --- |
+| `finalizeDsl { ... }` | Об’єкт Android DSL | Завершити налаштування `buildTypes`, `productFlavors` та інших DSL-параметрів перед створенням варіантів; корисно в convention plugins |
+| `beforeVariants { builder -> ... }` | `VariantBuilder` | Вимкнути непотрібні варіанти чи змінити доступні параметри builder до створення варіанта |
+| `onVariants { variant -> ... }` | `Variant` | Налаштувати доступні властивості створеного варіанта, поля `BuildConfig`, підключення генераторів коду та роботу з артефактами |
+
+Порядок етапів: налаштування `android` → `finalizeDsl` → `beforeVariants` → `onVariants`. Вимикати варіант у `onVariants` уже пізно. [Життєвий цикл Variant API](https://developer.android.com/build/extend-agp#variant-api-artifacts-and-tasks).
+
+### Приклад: відкинути `paidDebug` та додати мітку збірки
+
+Припустімо, у навчальному проєкті вирішили перевіряти платну версію лише у `release`. Це додаткове правило прикладу: сам Android не забороняє `paidDebug`.
+
+До наявного `build.gradle.kts` додайте імпорт на початку файлу, а `androidComponents` — окремим блоком після `android`. Налаштування flavors та `buildFeatures { buildConfig = true }` з попередніх розділів залишаються.
+
+```kotlin
+import com.android.build.api.variant.BuildConfigField // Опис поля згенерованого BuildConfig
+
+// plugins { ... } та android { ... } уже налаштовані вище.
+
+androidComponents {
+    // Обираємо конкретну комбінацію flavor paid і build type debug.
+    beforeVariants(selector().withName("paidDebug")) { builder ->
+        builder.enable = false // Не створювати цей варіант і його задачі збірки
+    }
+
+    // Налаштовуємо кожен варіант, який залишився увімкненим.
+    onVariants(selector().all()) { variant ->
+        variant.buildConfigFields?.put( // Додаємо поле, якщо генерація BuildConfig доступна
+            "BUILD_LABEL", // Ім'я поля: у коді застосунку це BuildConfig.BUILD_LABEL
+            BuildConfigField(
+                type = "String", // Тип поля у згенерованому класі
+                value = "\"${variant.name}\"", // Рядковий літерал, наприклад "freeDebug"
+                comment = "Назва варіанта збірки" // Коментар біля згенерованого поля
+            )
+        )
+    }
+}
+```
+
+Тепер із чотирьох комбінацій залишаться `freeDebug`, `freeRelease` та `paidRelease`. `paidDebug` не буде доступний для збірки. У `freeDebug` поле `BuildConfig.BUILD_LABEL` матиме значення `"freeDebug"`, у `paidRelease` — `"paidRelease"`.
+
+`buildConfigField(...)` з [довідника параметрів](#gradle-parameters) налаштовує поле через Android DSL. `variant.buildConfigFields` робить це через Variant API, коли вже відома конкретна комбінація. Не потрібно оголошувати `BUILD_LABEL` обома способами. [Офіційний приклад додавання полів через Variant API](https://github.com/android/gradle-recipes/tree/agp-9.0/addCustomBuildConfigFields).
+
+### `selector()`: обробляємо потрібні варіанти
+
+| Селектор | До яких варіантів застосує callback |
+| --- | --- |
+| `selector().all()` | До всіх відповідних варіантів |
+| `selector().withBuildType("release")` | До всіх release-варіантів: `freeRelease`, `paidRelease` |
+| `selector().withFlavor("tier" to "free")` | До варіантів із flavor `free` у вимірі `tier` |
+| `selector().withName("paidRelease")` | До одного варіанта з точним ім’ям `paidRelease` |
+
+Селектор обмежує виклики callback, але сам по собі не вимикає інші варіанти. Для вимкнення потрібне `builder.enable = false` у `beforeVariants`.
+
+Якщо значення залежить від результату власної Gradle-задачі, підключайте її вихід через `Provider`, зберігаючи відкладене обчислення. Для генерованих файлів використовуйте API `sources` або `artifacts`, а задачі реєструйте через `tasks.register(...)`. Так Gradle може визначити залежності між задачами; не потрібно вгадувати назви внутрішніх задач AGP або змінювати файли в `build/` вручну. Приклади таких інтеграцій є в [Android Gradle recipes](https://github.com/android/gradle-recipes).
+
+Після Gradle Sync перевірте список у **Build Variants**. Для модуля з назвою `app` можна зібрати APK командою `./gradlew :app:assembleFreeDebug` або AAB командою `./gradlew :app:bundlePaidRelease`. Для встановлення release APK та публікації AAB потрібне налаштоване підписання, як описано в розділі 2.
+
+---
+
 ## Підсумок
 
 1. **Build Type (Тип збірки)** — відповідає за технічні налаштування (debug, release, мініфікація, ключі підпису).
@@ -261,3 +329,4 @@ object AdsConfig {
 4. **`applicationIdSuffix`** дозволяє встановлювати кілька версій вашого додатка на один телефон одночасно.
 5. **`BuildConfig`** дозволяє передавати змінні з Gradle-файлу прямо у ваш Kotlin-код (дуже корисно для базових URL та ключів API).
 6. **Source sets** дозволяють доповнювати й перевизначати ресурси за пріоритетом та підключати код для конкретної версії. Kotlin- і Java-класи компілюються разом, тому дублювати клас між активними source sets не можна.
+7. **Variant API** дає доступ до кастомного налаштування: `beforeVariants` — для відбору варіантів, `onVariants` — для роботи з доступними властивостями й артефактами створених варіантів.
