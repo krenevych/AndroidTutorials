@@ -58,25 +58,31 @@ R8 використовує правила у форматі ProGuard. Обфу�
 Починаючи з **Android Gradle Plugin (AGP) 8.0**, генерація `BuildConfig` за замовчуванням вимкнена. Її налаштовуємо через `buildFeatures` у модулі; це поведінка AGP, а не самої системи Gradle. [Зміни в AGP 8.0](https://developer.android.com/build/releases/agp-8-0-0-release-notes#default-changes).
 
 ```kotlin
-android {
+android { // Налаштування Android-модуля
     // ...
 
-    buildFeatures {
-        buildConfig = true
+    buildFeatures { // Вмикаємо потрібні можливості генерації коду
+        buildConfig = true // Генерувати клас BuildConfig, зокрема наші поля BASE_URL
     }
 
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true // Увімкнути стиснення та обфускацію коду
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Наприклад, в release ми хочемо інший базовий URL
+    buildTypes { // Налаштування технічних режимів збірки
+        getByName("release") { // Доповнюємо наявний тип release, а не створюємо новий
+            isMinifyEnabled = true // Увімкнути видалення невикористаного коду, оптимізацію та обфускацію R8
+            proguardFiles( // Файли правил для R8, зокрема які класи та методи потрібно зберегти
+                getDefaultProguardFile("proguard-android-optimize.txt"), // Стандартні правила Android з оптимізацією
+                "proguard-rules.pro" // Додаткові правила цього модуля
+            )
+            // Аргументи: тип поля, його ім'я та вираз значення для згенерованого коду.
+            // Екрановані лапки \" потрібні, щоб значення стало рядковим літералом.
+            // У release поле BuildConfig.BASE_URL міститиме адресу production-сервера.
             buildConfigField("String", "BASE_URL", "\"https://api.myproduction.com/\"")
         }
-        
-        getByName("debug") {
+
+        getByName("debug") { // Доповнюємо наявний тип debug
             // Для дебагу зазвичай isMinifyEnabled = false (за замовчуванням)
-            applicationIdSuffix = ".debug" // Щоб можна було встановити debug і release одночасно на телефон!
-            versionNameSuffix = "-DEBUG"
+            applicationIdSuffix = ".debug" // Додати .debug до ID застосунку для окремого встановлення
+            versionNameSuffix = "-DEBUG" // Додати суфікс до назви версії: наприклад, 1.0 → 1.0-DEBUG; ID не змінює
+            // Те саме поле BuildConfig.BASE_URL, але з адресою тестового сервера для debug.
             buildConfigField("String", "BASE_URL", "\"https://api.testserver.com/\"")
         }
     }
@@ -96,24 +102,23 @@ android {
 Додаємо це у той самий блок `android { ... }`:
 
 ```kotlin
-android {
+android { // Продовжуємо налаштування того самого Android-модуля
     // ...
 
-    // 1. Оголошуємо виміри (можна мати декілька, наприклад "tier" і "environment")
-    flavorDimensions += "tier"
+    // Вимір — група взаємовиключних flavors. Назву tier (рівень продукту) обираємо самі.
+    flavorDimensions += "tier" // Додати вимір tier до списку; можна також оголосити інші, наприклад environment
 
-    // 2. Описуємо самі флейвори
-    productFlavors {
-        create("free") {
-            dimension = "tier"
-            // Змінюємо ім'я додатка, щоб юзер бачив різницю на робочому столі
-            manifestPlaceholders["appName"] = "MyApp Free" 
-            applicationIdSuffix = ".free"
+    productFlavors { // Описуємо версії продукту, які поєднуватимуться з build types
+        create("free") { // Створити flavor free: частину назв freeDebug та freeRelease
+            dimension = "tier" // Віднести free до виміру tier
+            // Підставити MyApp Free замість ${appName} в Manifest — це видима назва застосунку.
+            manifestPlaceholders["appName"] = "MyApp Free"
+            applicationIdSuffix = ".free" // Додати .free до ID: com.example.app → com.example.app.free
         }
-        create("paid") {
-            dimension = "tier"
-            manifestPlaceholders["appName"] = "MyApp Pro"
-            applicationIdSuffix = ".pro"
+        create("paid") { // Створити альтернативний flavor paid: paidDebug та paidRelease
+            dimension = "tier" // Той самий вимір: у варіант потрапить або free, або paid
+            manifestPlaceholders["appName"] = "MyApp Pro" // Видима назва платної версії в Manifest
+            applicationIdSuffix = ".pro" // Додати .pro до ID: com.example.app → com.example.app.pro
         }
     }
 }
@@ -132,9 +137,42 @@ android {
 
 Суфікс build type додається після суфікса flavor. Наведені налаштування змінюють назву, ідентифікатор і URL; логіку показу реклами потрібно реалізувати окремо, наприклад у коді flavor, як у розділі 5.
 
+<a id="gradle-parameters"></a>
+
+### Довідник параметрів Gradle для Android-модуля
+
+У таблиці зібрані параметри та виклики Kotlin DSL з попередніх прикладів і кілька пов’язаних налаштувань. У колонці «Де задавати» шляхи наведено відносно блока `android { ... }` у модульному `build.gradle.kts`. `productFlavors` і `buildTypes` означають блок конкретного flavor або типу збірки, наприклад `create("free")` чи `getByName("debug")`.
+
+| Параметр або виклик | Де задавати | Що означає | Приклад |
+| --- | --- | --- | --- |
+| `namespace` | Безпосередньо в `android` | Пакет згенерованих класів `R` і `BuildConfig` | `namespace = "com.example.app"` |
+| `applicationId` | `defaultConfig` або `productFlavors` | Ідентифікатор застосунку на пристрої та в Google Play | `applicationId = "com.example.app"` |
+| `applicationIdSuffix` | `productFlavors` або `buildTypes` | Додає суфікс до ID, дозволяючи окреме встановлення версій | `applicationIdSuffix = ".free"` → `com.example.app.free` |
+| `versionCode` | `defaultConfig` або `productFlavors` | Цілий номер для порівняння версій; для наступного оновлення його збільшують | `versionCode = 2` |
+| `versionName` | `defaultConfig` або `productFlavors` | Назва версії для користувача | `versionName = "1.1"` |
+| `versionNameSuffix` | `productFlavors` або `buildTypes` | Додає суфікс до назви версії, не змінюючи ID | `versionNameSuffix = "-DEBUG"` → `1.1-DEBUG` |
+| `flavorDimensions` | Безпосередньо в `android` | Список вимірів для групування flavors | `flavorDimensions += "tier"` |
+| `dimension` | `productFlavors` | Вимір, до якого належить цей flavor | `dimension = "tier"` |
+| `manifestPlaceholders` | `defaultConfig`, `productFlavors` або `buildTypes` | Значення для підстановки замість `${...}` у Manifest | `manifestPlaceholders["appName"] = "MyApp Free"` |
+| `buildConfig` | `buildFeatures` | Вмикає генерацію класу `BuildConfig` | `buildConfig = true` |
+| `buildConfigField(...)` | `defaultConfig`, `productFlavors` або `buildTypes` | Додає поле до `BuildConfig`: тип, ім’я, вираз значення | `buildConfigField("boolean", "ADS_ENABLED", "true")` |
+| `isDebuggable` | `buildTypes` | Дозволяє налагодження застосунку | `isDebuggable = true` |
+| `isMinifyEnabled` | `buildTypes` | Вмикає видалення невикористаного коду, оптимізацію й обфускацію R8 | `isMinifyEnabled = true` |
+| `isShrinkResources` | `buildTypes` | Вмикає видалення невикористаних ресурсів; застосовується разом із мініфікацією коду | `isShrinkResources = true` |
+| `proguardFiles(...)` | `defaultConfig`, `productFlavors` або `buildTypes` | Підключає файли правил R8 | `proguardFiles("proguard-rules.pro")` |
+| `signingConfig` | `defaultConfig`, `productFlavors` або `buildTypes` | Обирає попередньо створену конфігурацію підписання | `signingConfig = signingConfigs.getByName("release")` |
+| `getByName(...)` | Наприклад, `buildTypes` | Знаходить наявний елемент для налаштування | `getByName("debug") { ... }` |
+| `create(...)` | Наприклад, `productFlavors` | Створює новий елемент конфігурації | `create("free") { ... }` |
+
+`namespace`, `applicationId` і видима назва застосунку мають різне призначення. Наприклад, додавання `.free` змінює ID, але не пакет `BuildConfig`; назву під іконкою в нашому прикладі задає `appName` через Manifest. [Налаштування модуля](https://developer.android.com/build/configure-app-module), [налаштування варіантів](https://developer.android.com/build/build-variants).
+
+Для R8 у таблиці використано той самий DSL, що й у прикладі розділу 2. У новому DSL AGP 9.3+ ці налаштування об’єднує блок `optimization`; відповідний синтаксис наведений у [документації оптимізації](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization).
+
 ---
 
 ## 4. BuildConfig та доступ до змінних у Коді
+
+Короткі пояснення `buildConfig` та `buildConfigField(...)` можна знайти в [довіднику параметрів Gradle](#gradle-parameters).
 
 Вище у `buildTypes` ми написали магічний рядок:
 `buildConfigField("String", "BASE_URL", "\"https://api.testserver.com/\"")`
