@@ -92,7 +92,22 @@ android { // Налаштування Android-модуля
 }
 ```
 
-Цей фрагмент вмикає оптимізацію коду для `release`, але ще не налаштовує його підписання. Щоб отримати пакет для публікації, задайте release `signingConfig` або скористайтеся **Build → Generate Signed Bundle / APK**. Створення ключа та конфігурацію підписання описано в [інструкції Android](https://developer.android.com/studio/publish/app-signing#generate-key).
+Стандартні типи `release` і `debug` Android Gradle Plugin створює заздалегідь. У `build.gradle.kts` їх можна налаштувати через типобезпечні аксесори (згенеровані Gradle засоби доступу за іменем). Наприклад, усередині `android { ... }` блок `release { ... }` може замінити `getByName("release") { ... }`. [Приклад Kotlin DSL в Android Developers](https://developer.android.com/topic/performance/app-optimization/keep-rules-overview#legacy-dsl-kotlin).
+
+```kotlin
+buildTypes {
+    release {
+        isMinifyEnabled = true
+        // Решта налаштувань release з прикладу вище.
+    }
+    debug {
+        applicationIdSuffix = ".debug"
+        // Решта налаштувань debug з прикладу вище.
+    }
+}
+```
+
+Налаштування вище вмикають оптимізацію коду для `release`. Щоб отримати пакет для публікації, задайте release `signingConfig` або скористайтеся **Build → Generate Signed Bundle / APK**. [Створення ключа та налаштування підписання](https://developer.android.com/studio/publish/app-signing#generate-key).
 
 > 💡 **Магія `applicationIdSuffix`:** Якщо базовий пакет вашого додатка `com.example.app`, то додавши `.debug`, ваш дебажний додаток отримає ідентифікатор `com.example.app.debug`. Для операційної системи Android це **два абсолютно різні додатки**. Це дозволить вам мати на телефоні одразу дві іконки: звичайний додаток і тестовий!
 
@@ -122,6 +137,22 @@ android { // Продовжуємо налаштування того самог
             dimension = "tier" // Той самий вимір: у варіант потрапить або free, або paid
             manifestPlaceholders["appName"] = "MyApp Pro" // Видима назва платної версії в Manifest
             applicationIdSuffix = ".pro" // Додати .pro до ID: com.example.app → com.example.app.pro
+        }
+    }
+}
+```
+
+У Kotlin DSL Gradle визначає доступні аксесори після застосування плагінів, до виконання основної частини скрипта. Для `free`, створеного через `create("free")` у цьому самому `build.gradle.kts`, аксесор `free { ... }` недоступний. Щоб додатково налаштувати вже створений flavor, можна використати `named("free") { ... }` або `getByName("free") { ... }`. Якщо плагін додає flavor заздалегідь і Gradle генерує для нього аксесор, тоді доступний і блок `free { ... }`. [Правила генерації аксесорів Kotlin DSL](https://docs.gradle.org/current/userguide/kotlin_dsl.html#sec:kotlin-dsl-accessors).
+
+У Groovy DSL (`build.gradle`) блок за іменем може одразу створити й налаштувати flavor. [Приклад Groovy DSL в Android Developers](https://developer.android.com/build/build-variants#product-flavors).
+
+```groovy
+android {
+    flavorDimensions 'tier'
+    productFlavors {
+        free {
+            dimension 'tier'
+            applicationIdSuffix '.free'
         }
     }
 }
@@ -164,6 +195,7 @@ android { // Продовжуємо налаштування того самог
 | `isShrinkResources` | `buildTypes` | Вмикає видалення невикористаних ресурсів; застосовується разом із мініфікацією коду | `isShrinkResources = true` |
 | `proguardFiles(...)` | `defaultConfig`, `productFlavors` або `buildTypes` | Підключає файли правил R8 | `proguardFiles("proguard-rules.pro")` |
 | `signingConfig` | `defaultConfig`, `productFlavors` або `buildTypes` | Обирає попередньо створену конфігурацію підписання | `signingConfig = signingConfigs.getByName("release")` |
+| Типобезпечний аксесор | Наприклад, `buildTypes` | Налаштовує наявний елемент, для якого Gradle згенерував аксесор | `release { ... }` |
 | `getByName(...)` | Наприклад, `buildTypes` | Знаходить наявний елемент для налаштування | `getByName("debug") { ... }` |
 | `create(...)` | Наприклад, `productFlavors` | Створює новий елемент конфігурації | `create("free") { ... }` |
 
